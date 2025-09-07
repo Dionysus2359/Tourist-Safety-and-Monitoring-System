@@ -7,6 +7,7 @@ const {
     createEmergencyAlerts,
     createAlertsForSpecificGeofenceTypes
 } = require('../utils/alertHelpers');
+const { getAddressFromCoordinates } = require('../utils/geocoding');
 const {
     isValidObjectId,
     formatIncidentResponse,
@@ -56,8 +57,29 @@ const createIncident = async (req, res, next) => {
 
         // Add optional fields if provided
         if (tripId) incidentData.tripId = tripId;
-        if (address) incidentData.address = address;
         if (severity) incidentData.severity = severity;
+
+        // If address is not provided, try to get it from coordinates using reverse geocoding
+        if (!address) {
+            try {
+                console.log('Attempting to get address from coordinates:', location.coordinates);
+                const [lng, lat] = location.coordinates;
+                const geocodingResult = await getAddressFromCoordinates(lat, lng);
+
+                if (geocodingResult.data.address) {
+                    incidentData.address = geocodingResult.data.address;
+                    console.log('Address generated from coordinates:', incidentData.address);
+                } else {
+                    console.log('Could not generate address from coordinates, using fallback');
+                    incidentData.address = `Location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+                }
+            } catch (geocodingError) {
+                console.error('Geocoding error:', geocodingError);
+                incidentData.address = `Location: ${location.coordinates[1].toFixed(4)}, ${location.coordinates[0].toFixed(4)}`;
+            }
+        } else {
+            incidentData.address = address;
+        }
 
         const incident = new Incident(incidentData);
         await incident.save();
@@ -619,8 +641,29 @@ const createIncidentWithGeofenceDetection = async (req, res, next) => {
 
         // Add optional fields if provided
         if (tripId) incidentData.tripId = tripId;
-        if (address) incidentData.address = address;
         if (severity) incidentData.severity = severity;
+
+        // If address is not provided, try to get it from coordinates using reverse geocoding
+        if (!address) {
+            try {
+                console.log('Attempting to get address from coordinates:', location.coordinates);
+                const [lng, lat] = location.coordinates;
+                const geocodingResult = await getAddressFromCoordinates(lat, lng);
+
+                if (geocodingResult.data.address) {
+                    incidentData.address = geocodingResult.data.address;
+                    console.log('Address generated from coordinates:', incidentData.address);
+                } else {
+                    console.log('Could not generate address from coordinates, using fallback');
+                    incidentData.address = `Location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+                }
+            } catch (geocodingError) {
+                console.error('Geocoding error:', geocodingError);
+                incidentData.address = `Location: ${location.coordinates[1].toFixed(4)}, ${location.coordinates[0].toFixed(4)}`;
+            }
+        } else {
+            incidentData.address = address;
+        }
 
         // Find geofences containing this incident location
         console.log('Checking for geofences containing incident location...');

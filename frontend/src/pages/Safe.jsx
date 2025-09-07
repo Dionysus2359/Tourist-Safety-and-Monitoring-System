@@ -19,6 +19,7 @@ export default function SafeTravels() {
   const [selectedIncident, setSelectedIncident] = useState(null);
   const [selectedGeofence, setSelectedGeofence] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [currentUserLocation, setCurrentUserLocation] = useState(null);
 
   const handleLogout = async () => {
     await logout();
@@ -172,6 +173,13 @@ export default function SafeTravels() {
     console.log('Geofence clicked:', geofence);
   };
 
+  const handleLocationUpdate = (location, position) => {
+    setCurrentUserLocation(location);
+    console.log('📍 Current location received from map:', location);
+    console.log('📍 Position accuracy:', position?.coords?.accuracy, 'meters');
+    console.log('📍 Position timestamp:', new Date(position?.timestamp).toLocaleString());
+  };
+
   const handleSOSClick = async () => {
     try {
       console.log('🚨 SOS Button Clicked');
@@ -188,15 +196,22 @@ export default function SafeTravels() {
         return;
       }
 
+      // Get current location coordinates, fallback to Delhi if not available
+      const locationCoords = currentUserLocation
+        ? [currentUserLocation[1], currentUserLocation[0]] // [longitude, latitude]
+        : [77.2090, 28.6139]; // Delhi coordinates as fallback
+
       // Create emergency incident using authenticated API
       const emergencyIncident = {
         description: "EMERGENCY SOS ALERT - Immediate assistance required for tourist safety. Please respond urgently to the reported location.",
         location: {
-          coordinates: [77.2090, 28.6139] // Current location or user's location [longitude, latitude]
+          coordinates: locationCoords
         },
         severity: "high"
       };
 
+      console.log('📍 Current user location:', currentUserLocation);
+      console.log('📍 Using coordinates for SOS:', locationCoords);
       console.log('📝 Creating emergency incident with data:', emergencyIncident);
 
       // Create incident using authenticated API
@@ -212,7 +227,7 @@ export default function SafeTravels() {
           const alertResponse = await alertsAPI.createEmergencySOS({
             incidentId: incidentId,
             location: {
-              coordinates: emergencyIncident.location.coordinates
+              coordinates: locationCoords
             },
             touristInfo: {
               userId: user?.id || user?._id || 'unknown',
@@ -261,9 +276,8 @@ export default function SafeTravels() {
 
   return (
     <Layout showFooter={false}>
-      <div className="relative flex flex-col flex-1 min-h-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
-        {/* Background pattern overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-900/50 via-transparent to-slate-800/50"></div>
+      <div className="relative flex flex-col flex-1 min-h-0 bg-slate-950 text-white">
+        <div className="absolute inset-0 bg-slate-950"></div>
 
         {/* Map container fills available space below the app header */}
         <div className="relative flex-1 min-h-0 overflow-hidden">
@@ -275,97 +289,76 @@ export default function SafeTravels() {
               zoom={12}
               onIncidentClick={handleIncidentClick}
               onGeofenceClick={handleGeofenceClick}
+              onLocationUpdate={handleLocationUpdate}
               useCurrentLocation={true}
               style={{ height: '100%', width: '100%' }}
             />
           </div>
 
           {/* Map Legend - Top Right */}
-          <div className="absolute top-6 right-6 z-[1000] max-w-xs">
-            <Card className="bg-white/95 backdrop-blur-sm text-gray-900 shadow-2xl border-0 rounded-2xl overflow-hidden">
-              <CardHeader className="pb-3 bg-gradient-to-r from-blue-50 to-indigo-50">
-                <CardTitle className="text-sm font-bold text-gray-800 flex items-center gap-2">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                  Map Legend
-                </CardTitle>
+          <div className="absolute top-6 right-6 z-[1000] w-64">
+            <Card className="bg-white text-gray-900 shadow-xl border border-gray-200 rounded-xl">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-semibold">Map Legend</CardTitle>
               </CardHeader>
               <CardContent className="pt-0 p-4">
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
-                    <div className="w-4 h-4 bg-blue-500 rounded-full shadow-sm"></div>
-                    <span className="text-sm font-medium text-gray-700">Your Location</span>
-                  </div>
-                  <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
-                    <div className="w-4 h-4 bg-red-500 rounded-full shadow-sm"></div>
-                    <span className="text-sm font-medium text-gray-700">High Severity</span>
-                  </div>
-                  <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
-                    <div className="w-4 h-4 bg-yellow-500 rounded-full shadow-sm"></div>
-                    <span className="text-sm font-medium text-gray-700">Medium Severity</span>
-                  </div>
-                  <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
-                    <div className="w-4 h-4 bg-green-500 rounded-full shadow-sm"></div>
-                    <span className="text-sm font-medium text-gray-700">Low Severity</span>
-                  </div>
-                  <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
-                    <div className="w-4 h-4 border-2 border-red-500 rounded-full shadow-sm"></div>
-                    <span className="text-sm font-medium text-gray-700">Danger Zones</span>
-                  </div>
-                  <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
-                    <div className="w-4 h-4 border-2 border-yellow-500 rounded-full shadow-sm"></div>
-                    <span className="text-sm font-medium text-gray-700">Warning Zones</span>
-                  </div>
-                </div>
+                <ul className="space-y-2 text-xs text-gray-700">
+                  <li className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-blue-600"></span> Your Location</li>
+                  <li className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-red-600"></span> High Severity</li>
+                  <li className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-yellow-500"></span> Medium Severity</li>
+                  <li className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-green-600"></span> Low Severity</li>
+                  <li className="flex items-center gap-2"><span className="w-3 h-3 rounded-full border-2 border-red-600"></span> Danger Zones</li>
+                  <li className="flex items-center gap-2"><span className="w-3 h-3 rounded-full border-2 border-yellow-500"></span> Warning Zones</li>
+                </ul>
               </CardContent>
             </Card>
           </div>
 
           {/* Left side tools - Top Left */}
-          <div className="absolute top-6 left-6 z-[1000] space-y-4 max-w-sm w-full">
+          <div className="absolute top-6 left-6 z-[1000] space-y-4 w-[320px] max-w-[92vw]">
             {/* Search Bar */}
-            <Card className="bg-black/30 backdrop-blur-md border border-white/20 rounded-2xl shadow-2xl">
+            <Card className="bg-white text-gray-900 border border-gray-200 rounded-xl shadow-md">
               <CardContent className="p-4">
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <span className="material-symbols-outlined text-white/60 text-lg">search</span>
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500">
+                    {/* <span className="material-symbols-outlined text-base"></span> */}
                   </div>
                   <Input
-                    className="pl-10 bg-black/30 border-white/30 text-white placeholder:text-white/60 rounded-xl h-12 focus:ring-2 focus:ring-white/50 focus:border-white/50 text-sm"
-                    // placeholder="Search for locations, landmarks..."
+                    className="pl-10 h-10 bg-white border-gray-300 text-gray-900 placeholder:text-gray-500 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    placeholder="Search for locations, landmarks..."
                   />
                 </div>
               </CardContent>
             </Card>
 
             {/* Map Layers */}
-            <Card className="bg-black/30 backdrop-blur-md border border-white/20 rounded-2xl shadow-2xl">
+            <Card className="bg-white text-gray-900 border border-gray-200 rounded-xl shadow-md">
               <CardHeader className="pb-4">
-                <CardTitle className="text-lg font-bold text-white flex items-center gap-3">
-                  <div className="w-3 h-3 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full"></div>
-                  Map Layers
-                </CardTitle>
+                <CardTitle className="text-base font-semibold">Map Layers</CardTitle>
               </CardHeader>
               <CardContent className="pt-0 space-y-1">
                 <div className="space-y-2">
-                  <label className="flex items-center justify-between p-3 rounded-xl hover:bg-black/30 transition-all duration-200 cursor-pointer group">
+                  <label className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 cursor-pointer">
                     <div className="flex items-center gap-3">
-                      <div className="w-4 h-4 bg-red-500/20 rounded-lg border-2 border-red-500/40 group-hover:border-red-400 transition-colors"></div>
-                      <span className="text-sm font-medium text-white/90">High-Alert Zones</span>
+                      <div className="w-4 h-4 bg-red-500 rounded-sm"></div>
+                      <span className="text-sm font-medium text-gray-800">High-Alert Zones</span>
                     </div>
-                    <Checkbox className="data-[state=checked]:bg-red-500 data-[state=checked]:border-red-500 border-white/40" />
+                    <Checkbox className="data-[state=checked]:bg-red-500 data-[state=checked]:border-red-500" />
                   </label>
-                  <label className="flex items-center justify-between p-3 rounded-xl hover:bg-black/30 transition-all duration-200 cursor-pointer group">
+                  <label className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 cursor-pointer">
                     <div className="flex items-center gap-3">
-                      <div className="w-4 h-4 bg-green-500/20 rounded-lg border-2 border-green-500/40 group-hover:border-green-400 transition-colors"></div>
-                      <span className="text-sm font-medium text-white/90">Safe Routes</span>
+                      <div className="w-4 h-4 bg-green-500 rounded-sm"></div>
+                      <span className="text-sm font-medium text-gray-800">Safe Routes</span>
                     </div>
-                    <Checkbox defaultChecked className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500 border-white/40" />
+                    <Checkbox defaultChecked className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500" />
                   </label>
-                  <label className="flex items-center justify-between p-3 rounded-xl hover:bg-black/30 transition-all duration-200 cursor-pointer group">
-                    <div className="w-4 h-4 bg-blue-500/20 rounded-lg border-2 border-blue-500/40 group-hover:border-blue-400 transition-colors"></div>
-                    <span className="text-sm font-medium text-white/90">Police Stations</span>
+                  <label className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 cursor-pointer">
+                    <div className="flex items-center gap-3">
+                      <div className="w-4 h-4 bg-blue-500 rounded-sm"></div>
+                      <span className="text-sm font-medium text-gray-800">Police Stations</span>
+                    </div>
+                    <Checkbox className="data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500" />
                   </label>
-                  <Checkbox className="data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500 border-white/40" />
                 </div>
               </CardContent>
             </Card>
@@ -373,34 +366,26 @@ export default function SafeTravels() {
 
           {/* Right side controls - Bottom Right */}
           <div className="absolute bottom-6 right-6 z-[1000] flex flex-col items-end gap-4">
-            {/* Zoom Controls */}
-            <Card className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl shadow-2xl p-2">
-              <div className="flex flex-col gap-2">
-                {/* <Button
-                  size="sm"
-                  variant="ghost"
-                  className="w-10 h-10 text-white hover:bg-black/30 rounded-xl transition-all duration-200 hover:scale-105"
-                >
-                  <span className="material-symbols-outlined text-lg">add</span>
-                </Button>
-                <div className="w-8 h-px bg-white/30 mx-auto"></div>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="w-10 h-10 text-white hover:bg-black/30 rounded-xl transition-all duration-200 hover:scale-105"
-                >
-                  <span className="material-symbols-outlined text-lg">remove</span>
-                </Button> */}
+            {/* Location refresh button */}
+            <div className="relative group">
+              <Button
+                size="icon"
+                variant="secondary"
+                className="w-12 h-12 bg-white text-blue-600 border border-gray-300 shadow-lg hover:bg-blue-50 hover:scale-105 transition-all duration-200"
+                title="Refresh your location"
+                onClick={() => {
+                  console.log('Manual location refresh clicked');
+                  // Force a page reload to refresh geolocation
+                  window.location.reload();
+                }}
+              >
+                <span className="material-symbols-outlined text-xl">location_searching</span>
+              </Button>
+              <div className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200 whitespace-nowrap pointer-events-none shadow-md">
+                Refresh Location
+                <div className="absolute top-full right-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
               </div>
-            </Card>
-
-            {/* Location Button
-            <Button
-              size="lg"
-              className="w-14 h-14 bg-white text-gray-900 hover:bg-gray-100 rounded-2xl shadow-2xl border-0 hover:scale-105 transition-all duration-200"
-            >
-              My Location
-            </Button> */}
+            </div>
 
             {/* SOS Emergency Button */}
             <div className="relative group">
@@ -408,22 +393,14 @@ export default function SafeTravels() {
                 onClick={handleSOSClick}
                 className="relative w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-red-500 via-red-600 to-red-700 hover:from-red-600 hover:via-red-700 hover:to-red-800 text-white rounded-full shadow-2xl border-4 border-red-400/30 hover:border-red-300/50 hover:scale-105 transition-all duration-300 overflow-hidden group"
               >
-                {/* Animated background pulse */}
                 <div className="absolute inset-0 bg-red-400/20 rounded-full animate-ping"></div>
                 <div className="absolute inset-1 bg-red-500/10 rounded-full animate-pulse"></div>
-
-                {/* Content */}
                 <div className="relative flex flex-col items-center justify-center z-10">
-                  <span className="material-symbols-outlined text-3xl sm:text-4xl font-bold mb-1">sos</span>
+                  {/* <span className="material-symbols-outlined text-3xl sm:text-4xl font-bold mb-1">sos</span> */}
                   <span className="text-sm sm:text-base font-bold tracking-widest">SOS</span>
                 </div>
-
-                {/* Emergency glow effect */}
-                <div className="absolute inset-0 bg-gradient-to-br from-red-400/0 via-red-500/20 to-red-600/0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               </Button>
-
-              {/* Emergency tooltip */}
-              <div className="absolute bottom-full right-0 mb-3 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200 whitespace-nowrap pointer-events-none">
+              <div className="absolute bottom-full right-0 mb-3 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200 whitespace-nowrap pointer-events-none shadow-md">
                 Emergency SOS - Press for immediate help
                 <div className="absolute top-full right-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
               </div>
@@ -431,71 +408,44 @@ export default function SafeTravels() {
           </div>
 
           {/* Emergency Contacts - Bottom Left */}
-          <div className="absolute bottom-6 left-6 z-[1000] max-w-sm w-full">
-            <Card className="bg-black/30 backdrop-blur-md border border-white/20 rounded-2xl shadow-2xl">
+          <div className="absolute bottom-6 left-6 z-[1000] w-[340px] max-w-[92vw]">
+            <Card className="bg-white text-gray-900 border border-gray-200 rounded-xl shadow-md">
               <CardHeader className="pb-4">
-                <CardTitle className="text-lg font-bold text-white flex items-center gap-3">
-                  <div className="w-3 h-3 bg-gradient-to-r from-red-400 to-pink-500 rounded-full animate-pulse"></div>
-                  Emergency Contacts
-                </CardTitle>
+                <CardTitle className="text-base font-semibold">Emergency Contacts</CardTitle>
               </CardHeader>
               <CardContent className="pt-0 space-y-2">
                 <div className="space-y-1">
-                  <div className="flex items-center justify-between p-3 rounded-xl hover:bg-black/30 transition-all duration-200 group cursor-pointer">
+                  <div className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 cursor-pointer">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-red-500/20 rounded-xl flex items-center justify-center border border-red-500/30 group-hover:border-red-400 transition-colors">
-                        {/* <span className="material-symbols-outlined text-red-400 text-lg">local_police</span> */}
-                      </div>
+                      <div className="w-9 h-9 bg-red-50 text-red-600 rounded-md flex items-center justify-center border border-red-200">⚠️</div>
                       <div>
-                        <p className="text-sm font-semibold text-white">Local Police</p>
-                        <p className="text-xs text-white/60">Emergency: 100</p>
+                        <p className="text-sm font-semibold text-gray-900">Local Police</p>
+                        <p className="text-xs text-gray-500">Emergency: 100</p>
                       </div>
                     </div>
-                    <Button
-                      size="sm"
-                      className="bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 rounded-lg px-3 transition-all duration-200"
-                    >
-                      {/* <span className="material-symbols-outlined text-sm mr-1">call</span> */}
-                      Call
-                    </Button>
+                    <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white rounded-md px-3">Call</Button>
                   </div>
 
-                  <div className="flex items-center justify-between p-3 rounded-xl hover:bg-black/30 transition-all duration-200 group cursor-pointer">
+                  <div className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 cursor-pointer">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-blue-500/20 rounded-xl flex items-center justify-center border border-blue-500/30 group-hover:border-blue-400 transition-colors">
-                        {/* <span className="material-symbols-outlined text-blue-400 text-lg">apartment</span> */}
-                      </div>
+                      <div className="w-9 h-9 bg-blue-50 text-blue-600 rounded-md flex items-center justify-center border border-blue-200">🏛️</div>
                       <div>
-                        <p className="text-sm font-semibold text-white">Embassy</p>
-                        <p className="text-xs text-white/60">Consular Services</p>
+                        <p className="text-sm font-semibold text-gray-900">Embassy</p>
+                        <p className="text-xs text-gray-500">Consular Services</p>
                       </div>
                     </div>
-                    <Button
-                      size="sm"
-                      className="bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 border border-blue-500/30 rounded-lg px-3 transition-all duration-200"
-                    >
-                      {/* <span className="material-symbols-outlined text-sm mr-1">call</span> */}
-                      Call
-                    </Button>
+                    <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white rounded-md px-3">Call</Button>
                   </div>
 
-                  <div className="flex items-center justify-between p-3 rounded-xl hover:bg-black/30 transition-all duration-200 group cursor-pointer">
+                  <div className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 cursor-pointer">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-green-500/20 rounded-xl flex items-center justify-center border border-green-500/30 group-hover:border-green-400 transition-colors">
-                        {/* <span className="material-symbols-outlined text-green-400 text-lg">family_restroom</span> */}
-                      </div>
+                      <div className="w-9 h-9 bg-green-50 text-green-600 rounded-md flex items-center justify-center border border-green-200">👨‍👩‍👧‍👦</div>
                       <div>
-                        <p className="text-sm font-semibold text-white">Emergency Contact</p>
-                        <p className="text-xs text-white/60">Family Member</p>
+                        <p className="text-sm font-semibold text-gray-900">Emergency Contact</p>
+                        <p className="text-xs text-gray-500">Family Member</p>
                       </div>
                     </div>
-                    <Button
-                      size="sm"
-                      className="bg-green-500/20 hover:bg-green-500/30 text-green-400 border border-green-500/30 rounded-lg px-3 transition-all duration-200"
-                    >
-                      {/* <span className="material-symbols-outlined text-sm mr-1">call</span> */}
-                      Call
-                    </Button>
+                    <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white rounded-md px-3">Call</Button>
                   </div>
                 </div>
               </CardContent>
@@ -505,10 +455,10 @@ export default function SafeTravels() {
           {/* Selected Item Details Modal */}
           {(selectedIncident || selectedGeofence) && (
             <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[1100] max-w-md w-full mx-4">
-              <Card className="bg-white/95 backdrop-blur-md text-gray-900 shadow-2xl border-0 rounded-2xl overflow-hidden">
-                <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
+              <Card className="bg-white text-gray-900 shadow-xl border border-gray-200 rounded-xl overflow-hidden">
+                <CardHeader className="border-b border-gray-200">
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg font-bold text-gray-800">
+                    <CardTitle className="text-lg font-semibold text-gray-800">
                       {selectedIncident ? 'Incident Details' : 'Geofence Details'}
                     </CardTitle>
                     <Button
@@ -520,7 +470,7 @@ export default function SafeTravels() {
                       size="sm"
                       className="text-gray-500 hover:text-gray-700 rounded-full w-8 h-8 p-0"
                     >
-                      <span className="material-symbols-outlined">close</span>
+                      ✕
                     </Button>
                   </div>
                 </CardHeader>
