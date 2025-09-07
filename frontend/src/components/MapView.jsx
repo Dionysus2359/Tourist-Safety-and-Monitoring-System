@@ -67,10 +67,10 @@ const createGeofenceIcon = (alertType) => {
   });
 };
 
-// Custom icon for current location
+  // Custom icon for current location
 const createCurrentLocationIcon = () => {
   return L.divIcon({
-    className: 'custom-div-icon',
+    className: 'current-location-marker',
     html: `<div style="
       background-color: #007bff;
       width: 24px;
@@ -84,8 +84,29 @@ const createCurrentLocationIcon = () => {
       color: white;
       font-weight: bold;
       font-size: 14px;
-      animation: pulse 2s infinite;
-    ">📍</div>`,
+      position: relative;
+    ">
+      <div style="
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        background-color: #007bff;
+        animation: currentLocationPulse 2s infinite;
+        opacity: 0.7;
+      "></div>
+      📍
+    </div>
+    <style>
+      @keyframes currentLocationPulse {
+        0% { transform: scale(1); opacity: 0.7; }
+        50% { transform: scale(1.5); opacity: 0.3; }
+        100% { transform: scale(1); opacity: 0.7; }
+      }
+      .current-location-marker {
+        position: relative;
+      }
+    </style>`,
     iconSize: [24, 24],
     iconAnchor: [12, 12]
   });
@@ -110,6 +131,8 @@ const MapView = ({
   const [currentLocation, setCurrentLocation] = useState(null);
   const [locationError, setLocationError] = useState(null);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+  const [hasUserInteracted, setHasUserInteracted] = useState(false);
+  const [initialLocationSet, setInitialLocationSet] = useState(false);
 
   // Get current location with improved accuracy
   const getCurrentLocation = () => {
@@ -207,20 +230,26 @@ const MapView = ({
   // Helper function to update map with location
   const updateMapWithLocation = (latitude, longitude, position) => {
     const location = [latitude, longitude];
-    
-    // Update map center if map is already initialized
+    setCurrentLocation(location);
+
+    // Update map center if map is already initialized and user hasn't interacted yet
     if (mapInstanceRef.current) {
-      mapInstanceRef.current.setView(location, 16); // Increased zoom for better detail
-      
-      // Add current location marker
+      // Only center on initial location detection, not on updates
+      if (!initialLocationSet && !hasUserInteracted) {
+        mapInstanceRef.current.setView(location, 15); // Center on location with reasonable zoom
+        setInitialLocationSet(true);
+        console.log('Initial map center set to current location');
+      }
+
+      // Add/update current location marker
       if (currentLocationMarkerRef.current) {
         mapInstanceRef.current.removeLayer(currentLocationMarkerRef.current);
       }
-      
+
       const currentLocationMarker = L.marker(location, {
         icon: createCurrentLocationIcon()
       });
-      
+
       currentLocationMarker.bindPopup(`
         <div style="min-width: 200px;">
           <h4 style="margin: 0 0 8px 0; color: #007bff;">📍 Your Current Location</h4>
@@ -230,18 +259,29 @@ const MapView = ({
             Accuracy: ±${position.coords.accuracy.toFixed(0)} meters
           </p>
           <p style="margin: 4px 0; font-size: 11px; color: #28a745;">
-            ${position.coords.accuracy <= 50 ? '✅ High Accuracy' : 
+            ${position.coords.accuracy <= 50 ? '✅ High Accuracy' :
               position.coords.accuracy <= 100 ? '⚠️ Medium Accuracy' : '❌ Low Accuracy'}
+          </p>
+          <p style="margin: 4px 0; font-size: 11px; color: #666;">
+            Updated: ${new Date().toLocaleTimeString()}
           </p>
         </div>
       `);
-      
+
       currentLocationMarker.addTo(mapInstanceRef.current);
       currentLocationMarkerRef.current = currentLocationMarker;
-      console.log('Current location marker added to map');
-      
-      // Open popup to show location was found
-      currentLocationMarker.openPopup();
+      console.log('Current location marker added to map at:', location);
+
+      // Only open popup on initial detection
+      if (!initialLocationSet) {
+        setTimeout(() => {
+          if (currentLocationMarkerRef.current) {
+            currentLocationMarkerRef.current.openPopup();
+          }
+        }, 500);
+      }
+    } else {
+      console.log('Map not initialized yet, location will be set when map loads');
     }
   };
 
@@ -280,6 +320,15 @@ const MapView = ({
         metric: true,
         imperial: false
       }).addTo(mapInstanceRef.current);
+
+      // Add event listeners to detect user interaction
+      mapInstanceRef.current.on('zoomend', () => {
+        setHasUserInteracted(true);
+      });
+
+      mapInstanceRef.current.on('moveend', () => {
+        setHasUserInteracted(true);
+      });
 
       // Add current location marker if available
       if (currentLocation) {
@@ -460,28 +509,7 @@ const MapView = ({
     };
   }, [incidents, geofences, onIncidentClick, onGeofenceClick]);
 
-  // Expose map methods for parent components
-  const getMapInstance = () => mapInstanceRef.current;
-
-  const fitBounds = (bounds) => {
-    if (mapInstanceRef.current && bounds) {
-      mapInstanceRef.current.fitBounds(bounds);
-    }
-  };
-
-  const setView = (center, zoom) => {
-    if (mapInstanceRef.current) {
-      mapInstanceRef.current.setView(center, zoom);
-    }
-  };
-
-  // Expose methods via ref (if using forwardRef)
-  React.useImperativeHandle = React.useImperativeHandle || (() => {});
-  React.useImperativeHandle(React.forwardRef(() => null), () => ({
-    getMapInstance,
-    fitBounds,
-    setView
-  }));
+  // (Optional) Exposed helpers can be added with forwardRef if needed in the future
 
   // Debug logging
   console.log('MapView render - isLoadingLocation:', isLoadingLocation, 'locationError:', locationError, 'currentLocation:', currentLocation);
