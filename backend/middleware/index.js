@@ -1,4 +1,4 @@
-const { validateRequest } = require('./schemas');
+const { validateRequest } = require('../schemas');
 
 /**
  * Centralized Error Handler Middleware
@@ -179,32 +179,8 @@ const requestLogger = (req, res, next) => {
     next();
 };
 
-/**
- * CORS Configuration Middleware
- * Handles Cross-Origin Resource Sharing
- */
-const corsOptions = {
-    origin: function (origin, callback) {
-        // Allow requests with no origin (mobile apps, curl, etc.)
-        if (!origin) return callback(null, true);
-        
-        // Add your allowed origins here
-        const allowedOrigins = [
-            'http://localhost:3000',
-            'http://localhost:5173',
-            'http://127.0.0.1:3000',
-            'http://127.0.0.1:5173'
-        ];
-        
-        if (allowedOrigins.indexOf(origin) !== -1) {
-            callback(null, true);
-        } else {
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
-    credentials: true,
-    optionsSuccessStatus: 200
-};
+// Import CORS configuration from config file
+const corsOptions = require('../config/cors');
 
 /**
  * Rate Limiting Middleware (Basic Implementation)

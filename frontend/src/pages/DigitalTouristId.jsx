@@ -1,6 +1,25 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom"; 
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Shield,
+  User,
+  Phone,
+  Mail,
+  Calendar,
+  MapPin,
+  Key,
+  CheckCircle,
+  Home,
+  AlertTriangle
+} from "lucide-react";
 
 const TouristID = () => {
   const navigate = useNavigate();
@@ -59,131 +78,262 @@ const TouristID = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#1a1a1a]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+      <div className="flex items-center justify-center min-h-screen gradient-bg">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="text-white">Loading your Digital Tourist ID...</p>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#1a1a1a]">
-        <div className="text-center">
-          <p className="text-red-400 mb-4">{error}</p>
-          <button
-            onClick={() => navigate("/login")}
-            className="px-4 py-2 rounded bg-[#38e07b] text-white font-semibold hover:bg-green-500"
-          >
-            Go to Login
-          </button>
-        </div>
+      <div className="min-h-screen flex items-center justify-center gradient-bg p-4">
+        <Card className="w-full max-w-md glass-effect border-white/20">
+          <CardHeader className="text-center">
+            <AlertTriangle className="h-12 w-12 text-destructive mx-auto mb-4" />
+            <CardTitle className="text-white">Error Loading Profile</CardTitle>
+            <CardDescription>{error}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              onClick={() => navigate("/login")}
+              className="w-full bg-primary hover:bg-primary/90"
+            >
+              Go to Login
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="relative flex min-h-screen flex-col justify-between overflow-x-hidden bg-[#1a1a1a]">
-      <main className="flex-grow">
-        <div
-          className="relative flex min-h-screen flex-col items-center justify-center bg-cover bg-center bg-no-repeat p-4"
-          style={{
-            backgroundImage:
-              'linear-gradient(rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0.8) 100%), url("https://lh3.googleusercontent.com/aida-public/AB6AXuAt_ZYQ3apsArvgGfnX6mjRF9eh2dotLxjOcVF5PxQGXnru6PjW6jOmhPI7eYo3hUonlfgz2x3Ksvqh7c62mWMsUPle-0NzcCUgwKHRsE1C5_xgky6dZiPvIAgu9OG8eVs8JbT79xFmCt0ELE1SG9A6Ip77uwVIWo4cPrdUXH9Enr30DvjiUuMZ9YNWJbat4w7VkjFkYuS-wxRzDy-5rVgYIgZ_fs5Ego9GUwIM601EeIJ4ZWocyzk2Ctq1FbZSvNDEkzs957DhfVVz")',
-          }}
-        >
-          <div className="w-full max-w-lg space-y-6 rounded-2xl bg-gray-900/50 p-8 backdrop-blur-md">
-            <div className="text-center">
-              <h1 className="text-4xl font-bold tracking-tighter text-white sm:text-5xl">
-                Digital Tourist ID
-              </h1>
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+      {/* Header */}
+      <div className="border-b bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50">
+        <div className="flex h-16 items-center px-4">
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <Shield className="h-6 w-6 text-primary" />
+              <span className="text-lg font-semibold">Digital Tourist ID</span>
             </div>
+          </div>
+          <div className="ml-auto flex items-center space-x-4">
+            <Button variant="outline" size="sm" onClick={() => navigate("/safe")}>
+              <Home className="mr-2 h-4 w-4" />
+              Dashboard
+            </Button>
+          </div>
+        </div>
+      </div>
 
-            <div className="grid grid-cols-2 gap-x-6 gap-y-4 text-white">
-              <div>
-                <label className="text-sm font-medium text-gray-400">Name</label>
-                <p className="font-bold">{userData?.name || "N/A"}</p>
+      <div className="container mx-auto py-8 px-4">
+        <div className="max-w-4xl mx-auto space-y-6">
+          {/* Welcome Section */}
+          <div className="text-center space-y-2">
+            <div className="w-20 h-20 bg-primary/20 rounded-full flex items-center justify-center mx-auto">
+              <Shield className="w-10 h-10 text-primary" />
+            </div>
+            <h1 className="text-3xl font-bold">Your Digital Tourist ID</h1>
+            <p className="text-muted-foreground">
+              Your official SafeTravels identification and safety credentials
+            </p>
+          </div>
+
+          {/* Main ID Card */}
+          <Card className="glass-effect border-white/20">
+            <CardHeader className="text-center">
+              <div className="flex items-center justify-center space-x-4 mb-4">
+                <Avatar className="h-16 w-16">
+                  <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${userData?.name}`} />
+                  <AvatarFallback>
+                    {userData?.name?.charAt(0)?.toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <CardTitle className="text-2xl">{userData?.name || "N/A"}</CardTitle>
+                  <Badge variant="default" className="mt-1">
+                    <CheckCircle className="mr-1 h-3 w-3" />
+                    Verified Tourist
+                  </Badge>
+                </div>
               </div>
+            </CardHeader>
 
-              <div>
-                <label className="text-sm font-medium text-gray-400">ID No.</label>
-                <p className="font-bold">{generateDigitalId()}</p>
-              </div>
+            <CardContent className="space-y-6">
+              {/* ID Information Grid */}
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-3">
+                    <User className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Full Name</p>
+                      <p className="text-lg font-semibold">{userData?.name || "N/A"}</p>
+                    </div>
+                  </div>
 
-              <div>
-                <label className="text-sm font-medium text-gray-400">Phone No.</label>
-                <p className="font-bold">{userData?.phone || "N/A"}</p>
-              </div>
+                  <div className="flex items-center space-x-3">
+                    <Key className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Digital ID</p>
+                      <p className="text-lg font-semibold font-mono">{generateDigitalId()}</p>
+                    </div>
+                  </div>
 
-              <div>
-                <label className="text-sm font-medium text-gray-400">Status</label>
-                <p className="font-bold text-[#38e07b]">Verified</p>
-              </div>
+                  <div className="flex items-center space-x-3">
+                    <Phone className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Phone</p>
+                      <p className="text-lg font-semibold">{userData?.phone || "N/A"}</p>
+                    </div>
+                  </div>
 
-              <div>
-                <label className="text-sm font-medium text-gray-400">Issue Date</label>
-                <p className="font-bold">{new Date().toLocaleDateString()}</p>
-              </div>
+                  <div className="flex items-center space-x-3">
+                    <Mail className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Email</p>
+                      <p className="text-sm">{userData?.email || "N/A"}</p>
+                    </div>
+                  </div>
+                </div>
 
-              <div>
-                <label className="text-sm font-medium text-gray-400">Expiration Date</label>
-                <p className="font-bold">{new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toLocaleDateString()}</p>
-              </div>
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-3">
+                    <Calendar className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Issue Date</p>
+                      <p className="text-lg font-semibold">{new Date().toLocaleDateString()}</p>
+                    </div>
+                  </div>
 
-              <div className="col-span-2">
-                <label className="text-sm font-medium text-gray-400">Emergency Contacts</label>
-                <p>{userData?.emergencyContacts?.map(contact => `${contact.name} (${contact.relation})`).join(", ") || "N/A"}</p>
-              </div>
+                  <div className="flex items-center space-x-3">
+                    <Calendar className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Expiration</p>
+                      <p className="text-lg font-semibold">
+                        {new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
 
-              <div className="col-span-2">
-                <label className="text-sm font-medium text-gray-400">Public Key</label>
-                <p className="font-bold break-all">{generateDigitalId()}</p>
-                <p className="text-xs text-gray-400 mt-1">
-                  You can verify your ID using the public key
-                </p>
-              </div>
-
-              <div className="col-span-2">
-                <label className="text-sm font-medium text-gray-400">Signature</label>
-                <div className="mt-1 h-16 w-full rounded-md bg-white/10 p-2">
-                  <p className="text-lg italic text-gray-200" style={{ fontFamily: "'Dancing Script', cursive" }}>
-                    {generateSignature()}
-                  </p>
+                  <div className="flex items-center space-x-3">
+                    <MapPin className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Status</p>
+                      <Badge variant="default">Active</Badge>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="col-span-2 mt-4 rounded-lg bg-black/50 p-4">
-                <h3 className="text-lg font-bold text-white">Important Information</h3>
-                <p className="mt-2 text-sm text-gray-300">
-                  This digital ID is for identification purposes within the SafeTravels network. In case of emergency,
-                  please present this to the relevant authorities.
-                </p>
+              <Separator />
+
+              {/* Emergency Contacts */}
+              <div>
+                <h3 className="text-lg font-semibold mb-3">Emergency Contacts</h3>
+                {userData?.emergencyContacts?.length > 0 ? (
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {userData.emergencyContacts.map((contact, index) => (
+                      <Card key={index} className="bg-muted/50">
+                        <CardContent className="p-4">
+                          <div className="flex items-center space-x-3">
+                            <Avatar className="h-10 w-10">
+                              <AvatarFallback>
+                                {contact.name.charAt(0).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-medium">{contact.name}</p>
+                              <p className="text-sm text-muted-foreground">{contact.relation}</p>
+                              <p className="text-sm">{contact.phone}</p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <Alert>
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription>
+                      No emergency contacts configured. Please add emergency contacts for better safety coverage.
+                    </AlertDescription>
+                  </Alert>
+                )}
               </div>
-            </div>
-        
-            {/* Home Button */}
-            <div className="mt-4">
-              <button
-                className="px-4 py-2 rounded bg-[#38e07b] text-white font-semibold hover:bg-green-500"
-                onClick={() => navigate("/safe")} 
-              >
-                Home
-              </button>
-            </div>
-          </div>
+
+              <Separator />
+
+              {/* Technical Information */}
+              <div>
+                <h3 className="text-lg font-semibold mb-3">Technical Information</h3>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-2">Public Key</p>
+                    <p className="text-xs font-mono bg-muted p-2 rounded break-all">
+                      {generateDigitalId()}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-2">Digital Signature</p>
+                    <div className="bg-muted p-3 rounded">
+                      <p className="text-sm font-mono italic">
+                        {generateSignature()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Important Information */}
+              <Alert>
+                <Shield className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Important:</strong> This digital ID is your official identification within the SafeTravels network.
+                  Keep this information secure and present it to authorities when required during emergencies.
+                </AlertDescription>
+              </Alert>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                <Button
+                  className="flex-1 bg-primary hover:bg-primary/90"
+                  onClick={() => navigate("/safe")}
+                >
+                  <Home className="mr-2 h-4 w-4" />
+                  Go to Dashboard
+                </Button>
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => window.print()}
+                >
+                  Print ID Card
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
-      </main>
+      </div>
 
       {/* Footer */}
-      <footer className="w-full bg-[#1a1a1a] py-8 text-center">
-        <div className="container mx-auto px-4">
-          <div className="mb-4 flex flex-wrap items-center justify-center gap-x-8 gap-y-4 text-sm">
-            <a className="text-gray-400 hover:text-white" href="#">About Us</a>
-            <a className="text-gray-400 hover:text-white" href="#">Contact</a>
-            <a className="text-gray-400 hover:text-white" href="#">Privacy Policy</a>
-            <a className="text-gray-400 hover:text-white" href="#">Terms of Service</a>
+      <footer className="border-t bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50 mt-12">
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <div className="flex items-center space-x-2 mb-4 md:mb-0">
+              <Shield className="h-5 w-5 text-primary" />
+              <span className="text-sm text-muted-foreground">
+                © 2024 SafeTravels. All rights reserved.
+              </span>
+            </div>
+            <div className="flex space-x-6 text-sm text-muted-foreground">
+              <a href="#" className="hover:text-primary transition-colors">Privacy Policy</a>
+              <a href="#" className="hover:text-primary transition-colors">Terms of Service</a>
+              <a href="#" className="hover:text-primary transition-colors">Support</a>
+            </div>
           </div>
-          <div className="mb-4 flex justify-center gap-6">{/* Social icons */}</div>
-          <p className="text-sm text-gray-500">© 2024 SafeTravels. All rights reserved.</p>
         </div>
       </footer>
     </div>
