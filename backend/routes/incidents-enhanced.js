@@ -6,10 +6,8 @@ const {
     getIncidentById, 
     updateIncident, 
     deleteIncident,
-    getUserIncidents,
-    createIncidentWithGeofenceDetection,
-    createAlertsForExistingIncident
-} = require('../controllers/incidents');
+    getUserIncidents
+} = require('../controllers/incidents-enhanced');
 const { 
     incidentCreationSchema, 
     incidentUpdateSchema 
@@ -21,15 +19,15 @@ const {
     asyncHandler 
 } = require('../middleware');
 
-// GET /incidents - Get all incidents with pagination and filtering
-router.get('/', asyncHandler(getIncidents));
-
-// POST /incidents - Create a new incident (requires authentication)
+// POST /incidents - Create a new incident with all features (geocoding, geofence detection, alerts)
 router.post('/', 
     isLoggedIn,
     validateRequestMiddleware(incidentCreationSchema),
     asyncHandler(createIncident)
 );
+
+// GET /incidents - Get all incidents with pagination and filtering
+router.get('/', asyncHandler(getIncidents));
 
 // GET /incidents/my - Get current user's incidents (requires authentication)
 router.get('/my', 
@@ -43,7 +41,7 @@ router.get('/:id', asyncHandler(getIncidentById));
 // PUT /incidents/:id - Update an incident by ID (requires authentication)
 router.put('/:id', 
     isLoggedIn,
-    validateRequestMiddleware(incidentUpdateSchema),
+    validateRequestMiddleware(incidentCreationSchema), // Reuse creation schema for updates
     asyncHandler(updateIncident)
 );
 
@@ -59,18 +57,6 @@ router.get('/admin/all',
     isLoggedIn,
     isAdmin,
     asyncHandler(getIncidents)
-);
-
-// PUT /incidents/admin/:id/status - Update incident status (admin only)
-router.put('/admin/:id/status', 
-    isLoggedIn,
-    isAdmin,
-    validateRequestMiddleware(incidentUpdateSchema),
-    asyncHandler(async (req, res, next) => {
-        // Override the incident ID from params
-        req.params.id = req.params.id;
-        await updateIncident(req, res, next);
-    })
 );
 
 // GET /incidents/stats/summary - Get incident statistics (admin only)
@@ -136,7 +122,7 @@ router.get('/stats/summary',
     })
 );
 
-// GET /incidents/search - Search incidents with advanced filters (admin only)
+// GET /incidents/search/advanced - Search incidents with advanced filters (admin only)
 router.get('/search/advanced', 
     isLoggedIn,
     isAdmin,
@@ -201,7 +187,22 @@ router.get('/search/advanced',
                 success: true,
                 message: "Advanced search completed successfully",
                 data: {
-                    incidents: formatIncidentsResponse(incidents),
+                    incidents: incidents.map(incident => ({
+                        id: incident._id,
+                        description: incident.description,
+                        location: incident.location,
+                        address: incident.address,
+                        severity: incident.severity,
+                        status: incident.status,
+                        user: {
+                            id: incident.user._id,
+                            name: incident.user.name,
+                            email: incident.user.email,
+                            username: incident.user.username
+                        },
+                        createdAt: incident.createdAt,
+                        updatedAt: incident.updatedAt
+                    })),
                     pagination: buildPaginationObject(totalCount, parseInt(page), parseInt(limit)),
                     filters: {
                         status,
@@ -220,19 +221,6 @@ router.get('/search/advanced',
             next(error);
         }
     })
-);
-
-// POST /incidents/with-geofence-detection - Create incident with automatic geofence detection and alert creation
-router.post('/with-geofence-detection', 
-    isLoggedIn,
-    validateRequestMiddleware(incidentCreationSchema),
-    asyncHandler(createIncidentWithGeofenceDetection)
-);
-
-// POST /incidents/:id/create-alerts - Create alerts for existing incident
-router.post('/:id/create-alerts', 
-    isLoggedIn,
-    asyncHandler(createAlertsForExistingIncident)
 );
 
 module.exports = router;

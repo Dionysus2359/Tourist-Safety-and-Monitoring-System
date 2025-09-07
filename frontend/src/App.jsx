@@ -1,35 +1,30 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import React from 'react';
+import MapDemo from './components/MapDemo';
+import './App.css';
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Tourist Safety app</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
+    <div className="app">
+      <header style={{
+        background: '#007bff',
+        color: 'white',
+        padding: '1rem',
+        textAlign: 'center',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+      }}>
+        <h1 style={{ margin: 0, fontSize: '1.5rem' }}>
+          Smart Tourist Safety & Incident Response System
+        </h1>
+        <p style={{ margin: '0.5rem 0 0 0', opacity: 0.9 }}>
+          Real-time incident tracking and geofence monitoring
         </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+      </header>
+      
+      <main style={{ height: 'calc(100vh - 80px)' }}>
+        <MapDemo />
+      </main>
+    </div>
+  );
 }
 
-export default App
+export default App;

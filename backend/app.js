@@ -1,7 +1,6 @@
 if (process.env.NODE_ENV !== "production") {
     require('dotenv').config();
 }
-
 const express = require('express');
 const app = express();
 const cors = require('cors');
@@ -12,28 +11,46 @@ const passport = require('passport');
 const LocalStrategy = require('passport-local');
 const ExpressError = require('./utils/ExpressError');
 
-const uri = `mongodb+srv://dionysus2359:${process.env.MONGODB_ATLAS_PASS}@cluster0.fiv12j3.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
-const clientOptions = { serverApi: { version: '1', strict: true, deprecationErrors: true } };
-async function run() {
-    try {
-        // Create a Mongoose client with a MongoClientOptions object to set the Stable API version
-        const db = mongoose.connection;
-        db.on('error', console.error.bind(console, 'connection error:'));
-        db.once('open', () => {
-            console.log("Connected to MongoDB successfully!");
-        });
-    } finally {
-        // Ensures that the client will close when you finish/error
-        await mongoose.disconnect();
-    }
-}
-run().catch(console.dir);
+const User = require('./models/user');
+
+// Import middleware
+const { 
+    errorHandler, 
+    notFound, 
+    requestLogger, 
+    securityHeaders,
+    corsOptions 
+} = require('./middleware');
+
+// Import routes
+const userRoutes = require('./routes/users');
+const incidentRoutes = require('./routes/incidents');
+const geofenceRoutes = require('./routes/geofence');
+const alertRoutes = require('./routes/alerts');
+
+// MongoDB connection
+const uri = `mongodb+srv://dionysus2359:${process.env.MONGODB_ATLAS_PASS}@cluster0.fiv12j3.mongodb.net/touristsafety?retryWrites=true&w=majority&appName=Cluster0`;
+
+mongoose.connect(uri)
+    .then(() => console.log("✅ Connected to MongoDB Atlas"))
+    .catch(err => console.error("❌ MongoDB connection error:", err));
 
 
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-// app.use(methodOverride('_method'));
+
+// Security middleware
+app.use(securityHeaders);
+
+// CORS configuration
+app.use(cors(corsOptions));
+
+// Request logging
+app.use(requestLogger);
+
+// Body parsing middleware
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Static files
 app.use(express.static(path.join(__dirname, 'public')));
 
 sessionConfig = {
@@ -47,25 +64,28 @@ sessionConfig = {
 }
 
 app.use(session(sessionConfig));
-// app.use(passport.initialize());
-// app.use(passport.session());
+app.use(passport.initialize());
+app.use(passport.session());
 
-// passport.use(new LocalStrategy(User.authenticate()));
-// passport.serializeUser(User.serializeUser());
-// passport.deserializeUser(User.deserializeUser());
+passport.use(new LocalStrategy(User.authenticate()));
+passport.serializeUser(User.serializeUser());
+passport.deserializeUser(User.deserializeUser());
 
 app.get('/', (req, res) => {
-    res.send('API is running');
+    res.send('Smart Tourist Safety & Incident Response System API is running');
 });
 
-app.all(/(.*)/, (req, res, next) => {
-    next(new ExpressError('Page not found', 404))
-})
-app.use((err, req, res, next) => {
-    const { statusCode = 500 } = err;
-    if (!err.message) err.message = "Oh no, Something went wrong!"
-    res.status(statusCode).json({ error: err.message });
-});
+// Mount routes
+app.use('/users', userRoutes);
+app.use('/incidents', incidentRoutes);
+app.use('/geofences', geofenceRoutes);
+app.use('/alerts', alertRoutes);
+
+// 404 handler
+app.use(notFound);
+
+// Error handler
+app.use(errorHandler);
 
 app.listen(3000, () => {
     console.log("LISTENING ON PORT 3000");
