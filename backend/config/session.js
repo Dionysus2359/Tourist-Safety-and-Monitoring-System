@@ -10,7 +10,7 @@ const sessionConfig = {
         expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7), // 7 days
         maxAge: 1000 * 60 * 60 * 24 * 7,
         httpOnly: true, // Prevents XSS attacks
-        secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+        secure: false, // Allow HTTP in development (set to true in production)
         sameSite: 'lax' // CSRF protection
     },
     name: 'tourist-safety.sid' // Change default session name for security

@@ -13,6 +13,8 @@ const api = axios.create({
 api.interceptors.request.use(
     (config) => {
         // Add any request preprocessing here
+        console.log('🚀 API:', config.method?.toUpperCase(), config.url);
+
         return config;
     },
     (error) => {
@@ -23,14 +25,16 @@ api.interceptors.request.use(
 // Response interceptor for handling common errors
 api.interceptors.response.use(
     (response) => {
+        console.log('✅ API:', response.status, response.config.url);
         return response;
     },
     (error) => {
+        console.log('❌ API Error:', error.response?.status, error.config?.url, error.response?.data?.message || 'Unknown error');
+
         // Handle common errors - let components handle 401 errors themselves
         // instead of automatic redirects to avoid infinite loops
         if (error.response?.status === 401) {
-            // Just log the error and let the component handle it
-            console.log('Authentication error - component will handle redirect');
+            console.log('🔐 Auth error - session may have expired');
         }
         return Promise.reject(error);
     }
@@ -44,6 +48,11 @@ export const authAPI = {
     getProfile: () => api.get('/users/profile'),
     updateProfile: (userData) => api.put('/users/profile', userData),
     generateDigitalId: (publicKey) => api.post('/users/generate-digital-id', { publicKey }),
+};
+
+export const usersAPI = {
+    getAll: () => api.get('/users/all'),
+    updateLocation: (locationData) => api.put('/users/location', locationData),
 };
 
 export const incidentsAPI = {
@@ -68,6 +77,10 @@ export const alertsAPI = {
     create: (alertData) => api.post('/alerts', alertData),
     update: (id, alertData) => api.put(`/alerts/${id}`, alertData),
     markAsRead: (id) => api.put(`/alerts/${id}`, { read: true }),
+};
+
+export const statsAPI = {
+    getDashboard: () => api.get('/stats/dashboard'),
 };
 
 export default api;

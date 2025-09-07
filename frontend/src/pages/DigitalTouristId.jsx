@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { useAuth } from "../contexts/AuthContext";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,11 +19,13 @@ import {
   Key,
   CheckCircle,
   Home,
-  AlertTriangle
+  AlertTriangle,
+  LogOut
 } from "lucide-react";
 
 const TouristID = () => {
   const navigate = useNavigate();
+  const { logout } = useAuth();
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -109,8 +112,13 @@ const TouristID = () => {
     );
   }
 
+  const handleLogout = async () => {
+    await logout();
+    navigate("/");
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 px-3 sm:px-6 lg:px-8 mt-5">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-background to-muted/20 px-3 sm:px-6 lg:px-8">
       {/* Header */}
       <div className="border-b bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50">
         <div className="flex h-16 items-center px-4">
@@ -124,6 +132,10 @@ const TouristID = () => {
             <Button variant="outline" size="sm" onClick={() => navigate("/safe")}>
               <Home className="mr-2 h-4 w-4" />
               Dashboard
+            </Button>
+            <Button variant="destructive" size="sm" onClick={handleLogout}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Logout
             </Button>
           </div>
         </div>
@@ -319,7 +331,7 @@ const TouristID = () => {
       </div>
 
       {/* Footer */}
-      <footer className="border-t bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50 mt-12">
+      <footer className="mt-auto border-t bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50">
         <div className="container mx-auto px-4 py-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center space-x-2 mb-4 md:mb-0">

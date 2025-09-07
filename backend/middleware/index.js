@@ -25,9 +25,19 @@ const errorHandler = (err, req, res, next) => {
  * Checks if user is authenticated using session
  */
 const isLoggedIn = (req, res, next) => {
+    console.log('Session check:', {
+        hasSession: !!req.session,
+        userId: req.session?.userId,
+        userUsername: req.session?.userUsername,
+        sessionID: req.sessionID,
+        cookies: req.headers.cookie
+    });
+
     if (req.session && req.session.userId) {
+        console.log('✅ User authenticated:', req.session.userId);
         return next();
     } else {
+        console.log('❌ User not authenticated - no valid session');
         return res.status(401).json({
             success: false,
             message: "Authentication required. Please log in.",

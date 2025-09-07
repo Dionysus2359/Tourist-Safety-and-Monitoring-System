@@ -18,11 +18,13 @@ import SafeTravels from './pages/Safe';
 import TouristDetails from './pages/IdCard';
 import AdminLogin from './pages/adminlogin';
 
-// Protected Route Component
+// Protected Route Component - Moved outside App to prevent recreation
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
-  const { isAuthenticated, user, loading } = useAuth();
+  const { isAuthenticated, user, loading, authCheckCompleted } = useAuth();
 
-  if (loading) {
+  // Wait for authentication check to complete
+  if (loading || !authCheckCompleted) {
+    console.log('🔄 ProtectedRoute: Authentication check in progress...', { loading, authCheckCompleted });
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-green-400"></div>
@@ -30,16 +32,25 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
     );
   }
 
+  // Only check authentication after auth check is complete
   if (!isAuthenticated) {
+    console.log('❌ ProtectedRoute: User not authenticated', { isAuthenticated, user: user?.username, allowedRoles });
     // If route restricted to admins, redirect to admin login
     if (allowedRoles.includes('admin')) {
+      console.log('🔀 ProtectedRoute: Redirecting to admin login');
       return <Navigate to={ROUTES.ADMIN_LOGIN} replace />;
     }
-    // Otherwise, show standard login
-    return <Login />;
+    // Otherwise, redirect to standard login
+    console.log('🔀 ProtectedRoute: Redirecting to standard login');
+    return <Navigate to={ROUTES.LOGIN} replace />;
   }
 
+  // Check role permissions
   if (allowedRoles.length > 0 && !allowedRoles.includes(user?.role)) {
+    console.log('❌ ProtectedRoute: User does not have required role', {
+      userRole: user?.role,
+      allowedRoles
+    });
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -50,6 +61,7 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
     );
   }
 
+  console.log('✅ ProtectedRoute: Access granted');
   return children;
 };
 

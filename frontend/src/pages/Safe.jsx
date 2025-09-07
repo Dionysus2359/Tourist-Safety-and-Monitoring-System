@@ -1,15 +1,23 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 import MapView from "../components/MapView";
 import axios from "axios";
+import { alertsAPI } from "../services/api";
 
 export default function SafeTravels() {
   const navigate = useNavigate();
+  const { logout, user } = useAuth();
   const [incidents, setIncidents] = useState([]);
   const [geofences, setGeofences] = useState([]);
   const [selectedIncident, setSelectedIncident] = useState(null);
   const [selectedGeofence, setSelectedGeofence] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const handleLogout = async () => {
+    await logout();
+    navigate("/");
+  };
 
   // Fetch data from backend
   useEffect(() => {
@@ -69,26 +77,48 @@ export default function SafeTravels() {
     console.log('Geofence clicked:', geofence);
   };
 
-  const handleSOSClick = () => {
-    // Create emergency incident
-    const emergencyIncident = {
-      description: "EMERGENCY SOS - Immediate assistance required",
-      location: {
-        coordinates: [77.2090, 28.6139] // Current location or user's location
-      },
-      severity: "high"
-    };
+  const handleSOSClick = async () => {
+    try {
+      // Create emergency incident
+      const emergencyIncident = {
+        description: "EMERGENCY SOS - Immediate assistance required",
+        location: {
+          coordinates: [77.2090, 28.6139] // Current location or user's location
+        },
+        severity: "high"
+      };
 
-    // Send to backend
-    axios.post('http://localhost:3000/incidents', emergencyIncident)
-      .then(response => {
-        console.log('Emergency incident created:', response.data);
-        alert('Emergency alert sent! Help is on the way.');
-      })
-      .catch(error => {
-        console.error('Error creating emergency incident:', error);
-        alert('Emergency alert sent! Help is on the way.');
-      });
+      // Create incident first
+      const incidentResponse = await axios.post('http://localhost:3000/incidents', emergencyIncident);
+      console.log('Emergency incident created:', incidentResponse.data);
+
+      // Create alert linked to the incident
+      if (incidentResponse.data.success && incidentResponse.data.data.incident) {
+        const incidentId = incidentResponse.data.data.incident._id;
+
+        const alertData = {
+          title: "EMERGENCY SOS Alert",
+          message: "A tourist has triggered an emergency SOS signal. Immediate assistance required.",
+          type: "emergency",
+          priority: "high",
+          incident: incidentId,
+          location: emergencyIncident.location
+        };
+
+        try {
+          await alertsAPI.create(alertData);
+          console.log('Emergency alert created');
+        } catch (alertError) {
+          console.error('Error creating emergency alert:', alertError);
+          // Don't fail the whole operation if alert creation fails
+        }
+      }
+
+      alert('Emergency alert sent! Help is on the way.');
+    } catch (error) {
+      console.error('Error creating emergency incident:', error);
+      alert('Emergency alert sent! Help is on the way.');
+    }
   };
 
   if (loading) {
@@ -149,11 +179,21 @@ export default function SafeTravels() {
               </button>
             </nav>
             <div className="flex items-center gap-4">
+              <div className="flex items-center text-sm text-white/80">
+                <span>Welcome, {user?.name || user?.username}</span>
+              </div>
               <button className="rounded-full p-2 transition-colors hover:bg-white/10">
                 <span className="material-symbols-outlined">notifications</span>
               </button>
               <button className="rounded-full p-2 transition-colors hover:bg-white/10">
                 <span className="material-symbols-outlined">person</span>
+              </button>
+              <button
+                onClick={handleLogout}
+                className="rounded-full p-2 transition-colors hover:bg-white/10"
+                title="Logout"
+              >
+                <span className="material-symbols-outlined">logout</span>
               </button>
             </div>
           </div>

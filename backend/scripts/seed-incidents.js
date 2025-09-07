@@ -17,18 +17,25 @@ const Incident = require('../models/incident');
 const FRONTEND_SEED_PATH = path.resolve(__dirname, '../../frontend/src/components/data/seed.js');
 
 /**
- * Safely evaluate the array literal from seed.js
+ * Load the seed array from seed.js using dynamic import
  */
-function loadSeedArray(filePath) {
-    const raw = fs.readFileSync(filePath, 'utf8');
-    // Wrap in parentheses to evaluate array literal, expose Date for new Date(...)
-    const script = new vm.Script('(' + raw + ')');
-    const context = vm.createContext({ Date });
-    const result = script.runInContext(context);
-    if (!Array.isArray(result)) {
-        throw new Error('Seed file did not evaluate to an array');
+async function loadSeedArray(filePath) {
+    try {
+        // Use dynamic import for ES modules
+        const fileUrl = `file://${filePath.replace(/\\/g, '/')}`;
+        const seedData = await import(fileUrl);
+
+        // Handle both default export and named export
+        const data = seedData.default || seedData;
+
+        if (!Array.isArray(data)) {
+            throw new Error('Seed file did not export an array');
+        }
+        return data;
+    } catch (error) {
+        console.error('Error loading seed file:', error.message);
+        throw error;
     }
-    return result;
 }
 
 /**
@@ -92,7 +99,7 @@ async function upsertUserFromSeed(record) {
 }
 
 function buildIncidentDoc(seedRecord, userId) {
-    const { description, severity, status, location, date } = seedRecord;
+    const { description, severity, status, location, date, address } = seedRecord;
     const coordinates = Array.isArray(location) ? location : [];
     return {
         user: userId,
@@ -101,6 +108,7 @@ function buildIncidentDoc(seedRecord, userId) {
             type: 'Point',
             coordinates
         },
+        address: address || 'Unknown location',
         severity: ['low', 'medium', 'high'].includes(String(severity)) ? severity : 'low',
         status: ['reported', 'inProgress', 'resolved'].includes(String(status)) ? status : 'reported',
         createdAt: date instanceof Date ? date : new Date()
@@ -115,7 +123,7 @@ async function seedIncidents({ reset = false } = {}) {
         await Incident.deleteMany({});
     }
 
-    const records = loadSeedArray(FRONTEND_SEED_PATH);
+    const records = await loadSeedArray(FRONTEND_SEED_PATH);
     console.log(`📦 Loaded ${records.length} seed records from seed.js`);
 
     let created = 0;

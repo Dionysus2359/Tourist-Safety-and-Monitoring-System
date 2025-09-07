@@ -9,6 +9,7 @@
 // Load environment variables in development
 if (process.env.NODE_ENV !== "production") {
     require('dotenv').config();
+    process.env.NODE_ENV = 'development'; // Force development mode for local
 }
 
 // Core dependencies
@@ -42,6 +43,7 @@ const userRoutes = require('./routes/users');
 const incidentRoutes = require('./routes/incidents');
 const geofenceRoutes = require('./routes/geofence');
 const alertRoutes = require('./routes/alerts');
+const statsRoutes = require('./routes/stats');
 
 // Connect to database
 connectDB();
@@ -82,6 +84,7 @@ app.use('/users', userRoutes);
 app.use('/incidents', incidentRoutes);
 app.use('/geofences', geofenceRoutes);
 app.use('/alerts', alertRoutes);
+app.use('/stats', statsRoutes);
 
 // 404 handler
 app.use(notFound);

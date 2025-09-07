@@ -1,12 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const { 
-    registerUser, 
-    loginUser, 
-    logoutUser, 
-    getUserProfile, 
+const {
+    registerUser,
+    loginUser,
+    logoutUser,
+    getUserProfile,
     updateUserProfile,
-    generateDigitalId 
+    generateDigitalId,
+    getAllUsers,
+    updateUserLocation
 } = require('../controllers/users');
 const { 
     userRegistrationSchema, 
@@ -48,9 +50,21 @@ router.put('/profile',
 );
 
 // POST /generate-digital-id - Generate new digital ID (requires authentication)
-router.post('/generate-digital-id', 
+router.post('/generate-digital-id',
     isLoggedIn,
     asyncHandler(generateDigitalId)
+);
+
+// GET /all - Get all users (admin only)
+router.get('/all',
+    isLoggedIn,
+    asyncHandler(getAllUsers)
+);
+
+// PUT /location - Update user location (requires authentication)
+router.put('/location',
+    isLoggedIn,
+    asyncHandler(updateUserLocation)
 );
 
 // GET /auth-status - Check authentication status

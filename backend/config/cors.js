@@ -11,11 +11,12 @@ const corsOptions = {
         const allowedOrigins = process.env.ALLOWED_ORIGINS ?
             process.env.ALLOWED_ORIGINS.split(',') :
             [
-                'http://localhost:3000',
-                'http://localhost:5173',
+                'http://localhost:3000',  // Backend server
+                'http://localhost:5173',  // Frontend dev server (Vite)
                 'http://127.0.0.1:3000',
                 'http://127.0.0.1:5173',
                 'http://localhost:3001', // For potential admin panel
+                'http://localhost:8080', // Alternative dev port
             ];
 
         if (allowedOrigins.indexOf(origin) !== -1) {

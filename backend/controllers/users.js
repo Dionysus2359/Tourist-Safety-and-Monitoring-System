@@ -146,26 +146,41 @@ const loginUser = async (req, res, next) => {
         // Create session
         req.session.userId = user._id;
         req.session.userUsername = user.username;
+        req.session.role = user.role; // Store role in session
 
-        // Return user data (excluding sensitive information)
-        const userData = {
-            id: user._id,
-            name: user.name,
-            username: user.username,
-            email: user.email,
-            phone: user.phone,
-            digitalId: user.digitalId,
-            kycVerified: user.kycVerified,
-            role: user.role,
-            emergencyContacts: user.emergencyContacts,
-            tripInfo: user.tripInfo,
-            createdAt: user.createdAt
-        };
+        // Save session explicitly to ensure it's persisted
+        req.session.save((err) => {
+            if (err) {
+                console.error('Session save error:', err);
+                return res.status(500).json({
+                    success: false,
+                    message: "Error saving session",
+                    data: {}
+                });
+            }
 
-        res.status(200).json({
-            success: true,
-            message: "Login successful",
-            data: userData
+            console.log('Session created successfully for user:', user.username);
+
+            // Return user data (excluding sensitive information)
+            const userData = {
+                id: user._id,
+                name: user.name,
+                username: user.username,
+                email: user.email,
+                phone: user.phone,
+                digitalId: user.digitalId,
+                kycVerified: user.kycVerified,
+                role: user.role,
+                emergencyContacts: user.emergencyContacts,
+                tripInfo: user.tripInfo,
+                createdAt: user.createdAt
+            };
+
+            res.status(200).json({
+                success: true,
+                message: "Login successful",
+                data: userData
+            });
         });
 
     } catch (error) {
@@ -189,7 +204,7 @@ const logoutUser = async (req, res, next) => {
             }
 
             // Clear session cookie
-            res.clearCookie('connect.sid'); // Default session cookie name
+            res.clearCookie('tourist-safety.sid'); // Custom session cookie name
 
             res.status(200).json({
                 success: true,
@@ -407,11 +422,126 @@ const generateDigitalId = async (req, res, next) => {
     }
 };
 
+// Get all users (admin only)
+const getAllUsers = async (req, res, next) => {
+    try {
+        // Check if user is logged in and is admin
+        if (!req.session.userId) {
+            return res.status(401).json({
+                success: false,
+                message: "User not authenticated",
+                data: {}
+            });
+        }
+
+        // Find the current user and check if they're admin
+        const currentUser = await User.findById(req.session.userId);
+        if (!currentUser || currentUser.role !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: "Access denied. Admin privileges required.",
+                data: {}
+            });
+        }
+
+        // Get all users (exclude admin users from the results for tourists view)
+        const users = await User.find({ role: 'tourist' }).select('-salt -hash');
+
+        // Return user data (excluding sensitive information)
+        const usersData = users.map(user => ({
+            id: user._id,
+            name: user.name,
+            username: user.username,
+            email: user.email,
+            phone: user.phone,
+            location: user.location,
+            kycVerified: user.kycVerified,
+            role: user.role,
+            emergencyContacts: user.emergencyContacts,
+            tripInfo: user.tripInfo,
+            createdAt: user.createdAt
+        }));
+
+        res.status(200).json({
+            success: true,
+            message: "Users retrieved successfully",
+            data: {
+                users: usersData,
+                total: usersData.length
+            }
+        });
+
+    } catch (error) {
+        console.error('Get all users error:', error);
+        next(error);
+    }
+};
+
+// Update user location
+const updateUserLocation = async (req, res, next) => {
+    try {
+        // Check if user is logged in
+        if (!req.session.userId) {
+            return res.status(401).json({
+                success: false,
+                message: "User not authenticated",
+                data: {}
+            });
+        }
+
+        const { latitude, longitude, address, accuracy } = req.body;
+
+        if (!latitude || !longitude) {
+            return res.status(400).json({
+                success: false,
+                message: "Latitude and longitude are required",
+                data: {}
+            });
+        }
+
+        // Update user location
+        const updatedUser = await User.findByIdAndUpdate(
+            req.session.userId,
+            {
+                location: {
+                    coordinates: [longitude, latitude], // MongoDB expects [lng, lat]
+                    address: address || '',
+                    lastUpdated: new Date(),
+                    accuracy: accuracy || null
+                }
+            },
+            { new: true, runValidators: true }
+        );
+
+        if (!updatedUser) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found",
+                data: {}
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Location updated successfully",
+            data: {
+                location: updatedUser.location
+            }
+        });
+
+    } catch (error) {
+        console.error('Update location error:', error);
+        next(error);
+    }
+};
+
 module.exports = {
     registerUser,
     loginUser,
     logoutUser,
     getUserProfile,
     updateUserProfile,
-    generateDigitalId
+    generateDigitalId,
+    getAllUsers,
+    updateUserLocation
 };

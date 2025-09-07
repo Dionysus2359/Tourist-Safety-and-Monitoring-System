@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +8,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import IncidentsTable from "../components/IncidentsTable";
+import TouristMap from "../components/TouristMap";
 import {
   Shield,
   Users,
@@ -17,24 +20,140 @@ import {
   Phone,
   Mail,
   Calendar,
-  Activity
+  Activity,
+  LogOut,
+  RefreshCw
 } from "lucide-react";
+import { incidentsAPI, usersAPI, statsAPI, alertsAPI } from "../services/api";
+import AdminTouristsTable from "../components/AdminTouristsTable";
 
 export default function Admin() {
   const navigate = useNavigate();
+  const { logout, user, loading, isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [alerts, setAlerts] = useState([]);
+  const [alertsLoading, setAlertsLoading] = useState(false);
+
+  console.log('🎯 Admin component rendered:', {
+    user: user?.username,
+    role: user?.role,
+    isAuthenticated,
+    loading
+  });
+
+  // If still loading authentication, show loading spinner
+  if (loading) {
+    console.log('🔄 Admin: Authentication still loading...');
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-green-400"></div>
+      </div>
+    );
+  }
+
+  // If not authenticated or not admin, redirect
+  if (!isAuthenticated || user?.role !== 'admin') {
+    console.log('❌ Admin: Not authenticated or not admin role');
+    return null; // Let ProtectedRoute handle the redirect
+  }
+  const [stats, setStats] = useState([
+    { title: "Total Tourists", value: "0", icon: Users, change: "0%" },
+    { title: "Active Alerts", value: "0", icon: AlertTriangle, change: "0%" },
+    { title: "Safe Zones", value: "0", icon: Shield, change: "0%" },
+    { title: "Incidents Today", value: "0", icon: Activity, change: "0%" },
+  ]);
+  const [statsLoading, setStatsLoading] = useState(true);
+
+  const handleLogout = async () => {
+    await logout();
+    navigate("/");
+  };
 
   const handleViewTourist = (touristId) => {
     navigate(`/touristdetails/${touristId}`);
   };
 
-  // Mock data for demonstration
-  const stats = [
-    { title: "Total Tourists", value: "1,247", icon: Users, change: "+12%" },
-    { title: "Active Alerts", value: "23", icon: AlertTriangle, change: "-5%" },
-    { title: "Safe Zones", value: "89", icon: Shield, change: "+3%" },
-    { title: "Incidents Today", value: "7", icon: Activity, change: "-8%" },
-  ];
+  // Fetch real stats from API - wrapped with useCallback to prevent unnecessary re-renders
+  const fetchStats = useCallback(async () => {
+    try {
+      setStatsLoading(true);
+
+      // Use the new dashboard stats API
+      const response = await statsAPI.getDashboard();
+
+      if (response.data.success) {
+        const statsData = response.data.data.stats;
+
+        // Update stats with real data
+        setStats([
+          {
+            title: "Total Tourists",
+            value: statsData.totalTourists.value.toLocaleString(),
+            icon: Users,
+            change: statsData.totalTourists.change
+          },
+          {
+            title: "Active Alerts",
+            value: statsData.activeAlerts.value.toString(),
+            icon: AlertTriangle,
+            change: statsData.activeAlerts.change
+          },
+          {
+            title: "Safe Zones",
+            value: statsData.safeZones.value.toString(),
+            icon: Shield,
+            change: statsData.safeZones.change
+          },
+          {
+            title: "Total Incidents",
+            value: statsData.totalIncidents.value.toString(),
+            icon: Activity,
+            change: statsData.totalIncidents.change
+          },
+        ]);
+      }
+    } catch (error) {
+      console.error("Error fetching stats:", error);
+      // Fallback to default values if API fails
+      setStats([
+        { title: "Total Tourists", value: "0", icon: Users, change: "0%" },
+        { title: "Active Alerts", value: "0", icon: AlertTriangle, change: "0%" },
+        { title: "Safe Zones", value: "0", icon: Shield, change: "0%" },
+        { title: "Total Incidents", value: "0", icon: Activity, change: "0%" },
+      ]);
+    } finally {
+      setStatsLoading(false);
+    }
+  }, []);
+
+  // Fetch alerts for the alerts tab
+  const fetchAlerts = useCallback(async () => {
+    try {
+      setAlertsLoading(true);
+      const response = await alertsAPI.getAll();
+
+      if (response.data.success) {
+        setAlerts(response.data.data.alerts || []);
+      }
+    } catch (error) {
+      console.error("Error fetching alerts:", error);
+      setAlerts([]);
+    } finally {
+      setAlertsLoading(false);
+    }
+  }, []);
+
+  // Fetch stats on component mount - only once
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
+
+  // Fetch alerts when alerts tab is selected
+  useEffect(() => {
+    if (activeTab === "alerts") {
+      fetchAlerts();
+    }
+  }, [activeTab, fetchAlerts]);
 
   const tourists = [
     {
@@ -91,9 +210,16 @@ export default function Admin() {
             </div>
           </div>
           <div className="ml-auto flex items-center space-x-4">
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+              <span>Welcome, {user?.name || user?.username}</span>
+            </div>
             <Button variant="outline" size="sm">
               <Settings className="mr-2 h-4 w-4" />
               Settings
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleLogout}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Logout
             </Button>
           </div>
         </div>
@@ -112,10 +238,14 @@ export default function Admin() {
                 <CardTitle className="text-sm font-medium">
                   {stat.title}
                 </CardTitle>
-                <stat.icon className="h-4 w-4 text-muted-foreground" />
+                {statsLoading ? (
+                  <RefreshCw className="h-4 w-4 text-muted-foreground animate-spin" />
+                ) : (
+                  <stat.icon className="h-4 w-4 text-muted-foreground" />
+                )}
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
+                <div className="text-2xl font-bold">{statsLoading ? "..." : stat.value}</div>
                 <p className="text-xs text-muted-foreground">
                   <span className={stat.change.startsWith('+') ? 'text-green-600' : 'text-red-600'}>
                     {stat.change}
@@ -131,27 +261,30 @@ export default function Admin() {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList className="w-full justify-start overflow-x-auto">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+            <TabsTrigger value="incidents">Incidents</TabsTrigger>
             <TabsTrigger value="tourists">Tourists</TabsTrigger>
+            <TabsTrigger value="locations">Locations</TabsTrigger>
             <TabsTrigger value="alerts">Alerts</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
           </TabsList>
 
           <TabsContent value="dashboard" className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-              {/* Map View */}
+              {/* Tourist Locations Map */}
               <Card className="col-span-4">
                 <CardHeader>
-                  <CardTitle>Live Map View</CardTitle>
+                  <CardTitle>Tourist Locations</CardTitle>
                   <CardDescription>
-                    Real-time location of all registered tourists
+                    Real-time location tracking of all registered tourists
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="pl-2">
-                  <div className="aspect-video bg-muted/50 rounded-lg flex items-center justify-center">
-                    <div className="text-center">
-                      <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                      <p className="text-muted-foreground">Interactive map would be displayed here</p>
-                    </div>
+                  <div className="rounded-lg overflow-hidden" style={{ height: '420px' }}>
+                    <TouristMap
+                      style={{ height: '100%', width: '100%' }}
+                      center={[20.5937, 78.9629]} // Center on India
+                      zoom={5}
+                    />
                   </div>
                 </CardContent>
               </Card>
@@ -206,6 +339,10 @@ export default function Admin() {
             </div>
           </TabsContent>
 
+          <TabsContent value="incidents" className="space-y-4">
+            <IncidentsTable />
+          </TabsContent>
+
           <TabsContent value="tourists" className="space-y-4">
             <Card>
               <CardHeader>
@@ -215,65 +352,31 @@ export default function Admin() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Tourist</TableHead>
-                      <TableHead>Contact</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Location</TableHead>
-                      <TableHead>Last Active</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {tourists.map((tourist) => (
-                      <TableRow key={tourist.id}>
-                        <TableCell className="font-medium">
-                          <div className="flex items-center space-x-3">
-                            <Avatar>
-                              <AvatarImage src={tourist.avatar} alt={tourist.name} />
-                              <AvatarFallback>{tourist.name.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <div className="font-medium">{tourist.name}</div>
-                              <div className="text-sm text-muted-foreground">{tourist.email}</div>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
-                            <div className="flex items-center text-sm">
-                              <Phone className="mr-2 h-3 w-3" />
-                              {tourist.phone}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={tourist.status === 'active' ? 'default' : 'secondary'}
-                          >
-                            {tourist.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{tourist.location}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {tourist.lastActive}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleViewTourist(tourist.id)}
-                          >
-                            <Eye className="mr-2 h-4 w-4" />
-                            View
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <AdminTouristsTable />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="locations" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5" />
+                  Tourist Location Tracking
+                </CardTitle>
+                <CardDescription>
+                  Interactive map showing all tourist locations with real-time updates
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[600px] rounded-lg overflow-hidden border">
+                  <TouristMap
+                    style={{ height: '100%', width: '100%' }}
+                    center={[20.5937, 78.9629]} // Center on India
+                    zoom={5}
+                    showControls={true}
+                  />
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -281,16 +384,91 @@ export default function Admin() {
           <TabsContent value="alerts" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Active Alerts</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5" />
+                  Active Alerts
+                </CardTitle>
                 <CardDescription>
                   Monitor and respond to tourist safety alerts
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-8">
-                  <AlertTriangle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">No active alerts at the moment</p>
-                </div>
+                {alertsLoading ? (
+                  <div className="text-center py-8">
+                    <RefreshCw className="h-8 w-8 text-muted-foreground mx-auto mb-4 animate-spin" />
+                    <p className="text-muted-foreground">Loading alerts...</p>
+                  </div>
+                ) : alerts.length === 0 ? (
+                  <div className="text-center py-8">
+                    <AlertTriangle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">No active alerts at the moment</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {alerts.map((alert) => (
+                      <div
+                        key={alert._id}
+                        className={`p-4 rounded-lg border ${
+                          alert.priority === 'high'
+                            ? 'border-red-200 bg-red-50'
+                            : alert.priority === 'medium'
+                            ? 'border-yellow-200 bg-yellow-50'
+                            : 'border-blue-200 bg-blue-50'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <h4 className="font-semibold text-gray-900">
+                                {alert.title || 'Alert'}
+                              </h4>
+                              <Badge
+                                variant={
+                                  alert.priority === 'high'
+                                    ? 'destructive'
+                                    : alert.priority === 'medium'
+                                    ? 'secondary'
+                                    : 'outline'
+                                }
+                              >
+                                {alert.priority?.toUpperCase() || 'LOW'}
+                              </Badge>
+                              {!alert.read && (
+                                <Badge variant="outline" className="text-red-600 border-red-600">
+                                  UNREAD
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-gray-700 mb-2">
+                              {alert.message}
+                            </p>
+                            <div className="flex items-center gap-4 text-xs text-gray-500">
+                              <span>
+                                {new Date(alert.createdAt).toLocaleString()}
+                              </span>
+                              {alert.incident && (
+                                <span>Incident: {alert.incident.description || 'Related incident'}</span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                // Mark as read functionality could be added here
+                                console.log('Mark alert as read:', alert._id);
+                              }}
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              View
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
