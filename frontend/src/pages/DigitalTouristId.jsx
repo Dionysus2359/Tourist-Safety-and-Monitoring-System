@@ -1,8 +1,85 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom"; 
+import axios from "axios";
 
 const TouristID = () => {
   const navigate = useNavigate();
+  const [userData, setUserData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        // Try to get user data from localStorage first
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          const user = JSON.parse(storedUser);
+          setUserData(user);
+          setLoading(false);
+          return;
+        }
+
+        // If not in localStorage, try to fetch from backend
+        const response = await axios.get('http://localhost:3000/users/profile', {
+          withCredentials: true
+        });
+
+        if (response.data.success) {
+          setUserData(response.data.data);
+          localStorage.setItem('user', JSON.stringify(response.data.data));
+        } else {
+          setError("Failed to load user data");
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+        setError("Failed to load user data. Please login again.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
+  const generateDigitalId = () => {
+    if (!userData) return "";
+    // Generate a simple digital ID based on user data
+    const timestamp = new Date().getTime();
+    const random = Math.random().toString(36).substring(2, 8);
+    return `DT${timestamp.toString(36)}${random}`.toUpperCase();
+  };
+
+  const generateSignature = () => {
+    if (!userData) return "";
+    // Generate a simple signature based on user data
+    const data = `${userData.name}${userData.email}${userData.phone}`;
+    return btoa(data).substring(0, 20);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#1a1a1a]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#1a1a1a]">
+        <div className="text-center">
+          <p className="text-red-400 mb-4">{error}</p>
+          <button
+            onClick={() => navigate("/login")}
+            className="px-4 py-2 rounded bg-[#38e07b] text-white font-semibold hover:bg-green-500"
+          >
+            Go to Login
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative flex min-h-screen flex-col justify-between overflow-x-hidden bg-[#1a1a1a]">
@@ -24,42 +101,42 @@ const TouristID = () => {
             <div className="grid grid-cols-2 gap-x-6 gap-y-4 text-white">
               <div>
                 <label className="text-sm font-medium text-gray-400">Name</label>
-                <p className="font-bold">{""}</p>
+                <p className="font-bold">{userData?.name || "N/A"}</p>
               </div>
 
               <div>
                 <label className="text-sm font-medium text-gray-400">ID No.</label>
-                <p className="font-bold">{""}</p>
+                <p className="font-bold">{generateDigitalId()}</p>
               </div>
 
               <div>
                 <label className="text-sm font-medium text-gray-400">Phone No.</label>
-                <p className="font-bold">{""}</p>
+                <p className="font-bold">{userData?.phone || "N/A"}</p>
               </div>
 
               <div>
                 <label className="text-sm font-medium text-gray-400">Status</label>
-                <p className="font-bold text-[#38e07b]">{""}</p>
+                <p className="font-bold text-[#38e07b]">Verified</p>
               </div>
 
               <div>
                 <label className="text-sm font-medium text-gray-400">Issue Date</label>
-                <p className="font-bold">{""}</p>
+                <p className="font-bold">{new Date().toLocaleDateString()}</p>
               </div>
 
               <div>
                 <label className="text-sm font-medium text-gray-400">Expiration Date</label>
-                <p className="font-bold">{""}</p>
+                <p className="font-bold">{new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toLocaleDateString()}</p>
               </div>
 
               <div className="col-span-2">
                 <label className="text-sm font-medium text-gray-400">Emergency Contacts</label>
-                <p>{""}</p>
+                <p>{userData?.emergencyContacts?.map(contact => `${contact.name} (${contact.relation})`).join(", ") || "N/A"}</p>
               </div>
 
               <div className="col-span-2">
                 <label className="text-sm font-medium text-gray-400">Public Key</label>
-                <p className="font-bold break-all">{""}</p>
+                <p className="font-bold break-all">{generateDigitalId()}</p>
                 <p className="text-xs text-gray-400 mt-1">
                   You can verify your ID using the public key
                 </p>
@@ -69,7 +146,7 @@ const TouristID = () => {
                 <label className="text-sm font-medium text-gray-400">Signature</label>
                 <div className="mt-1 h-16 w-full rounded-md bg-white/10 p-2">
                   <p className="text-lg italic text-gray-200" style={{ fontFamily: "'Dancing Script', cursive" }}>
-                    {""}
+                    {generateSignature()}
                   </p>
                 </div>
               </div>

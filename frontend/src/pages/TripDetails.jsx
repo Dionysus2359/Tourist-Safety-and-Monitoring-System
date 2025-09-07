@@ -1,10 +1,61 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 export default function TripDetails() {
   const [startType, setStartType] = useState("text");
   const [endType, setEndType] = useState("text");
+  const [formData, setFormData] = useState({
+    startDate: "",
+    endDate: "",
+    startLocation: "",
+    endLocation: ""
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const navigate = useNavigate();
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleNext = async () => {
+    setError("");
+    setLoading(true);
+
+    // Basic validation
+    if (!formData.startDate || !formData.endDate || !formData.startLocation || !formData.endLocation) {
+      setError("Please fill in all fields");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      // Create trip data
+      const tripData = {
+        startDate: formData.startDate,
+        endDate: formData.endDate,
+        startLocation: formData.startLocation,
+        endLocation: formData.endLocation,
+        status: "planned"
+      };
+
+      // Store trip data in localStorage for now (you can create a trips API endpoint later)
+      localStorage.setItem('tripData', JSON.stringify(tripData));
+      
+      console.log('Trip details saved:', tripData);
+      navigate("/KycOtpPage");
+    } catch (error) {
+      console.error('Error saving trip details:', error);
+      setError("Failed to save trip details. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div
@@ -29,6 +80,12 @@ export default function TripDetails() {
                 Please provide your trip information.
               </p>
             </div>
+
+            {error && (
+              <div className="bg-red-500/20 border border-red-500 text-red-200 px-4 py-3 rounded-lg">
+                {error}
+              </div>
+            )}
 
             {/* Progress steps */}
             <div className="space-y-6">
@@ -75,53 +132,82 @@ export default function TripDetails() {
                   {/* Start Date */}
                   <div className="relative">
                     <input
+                      name="startDate"
+                      value={formData.startDate}
+                      onChange={handleInputChange}
                       type={startType}
                       placeholder="Start Date"
                       className="w-full rounded-full border-gray-600 bg-gray-900/50 px-4 py-3 text-white placeholder-gray-400 focus:border-[#38e07b] focus:ring-[#38e07b]"
                       onFocus={() => setStartType("date")}
                       onBlur={() => setStartType("text")}
+                      required
                     />
                   </div>
 
                   {/* End Date */}
                   <div className="relative">
                     <input
+                      name="endDate"
+                      value={formData.endDate}
+                      onChange={handleInputChange}
                       type={endType}
                       placeholder="End Date"
                       className="w-full rounded-full border-gray-600 bg-gray-900/50 px-4 py-3 text-white placeholder-gray-400 focus:border-[#38e07b] focus:ring-[#38e07b]"
                       onFocus={() => setEndType("date")}
                       onBlur={() => setEndType("text")}
+                      required
                     />
                   </div>
 
                   {/* Start Location */}
                   <input
+                    name="startLocation"
+                    value={formData.startLocation}
+                    onChange={handleInputChange}
                     type="text"
                     placeholder="Start Location"
                     className="w-full rounded-full border-gray-600 bg-gray-900/50 px-4 py-3 text-white placeholder-gray-400 focus:border-[#38e07b] focus:ring-[#38e07b]"
+                    required
                   />
 
                   {/* End Location */}
                   <input
+                    name="endLocation"
+                    value={formData.endLocation}
+                    onChange={handleInputChange}
                     type="text"
                     placeholder="End Location"
                     className="w-full rounded-full border-gray-600 bg-gray-900/50 px-4 py-3 text-white placeholder-gray-400 focus:border-[#38e07b] focus:ring-[#38e07b]"
+                    required
                   />
                 </div>
               </div>
 
               {/* Buttons */}
               <div className="flex justify-between pt-4">
-                <button className="flex items-center justify-center gap-2 rounded-full border border-gray-600 px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-gray-800">
+                <button 
+                  onClick={() => navigate("/emergency")}
+                  className="flex items-center justify-center gap-2 rounded-full border border-gray-600 px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-gray-800"
+                >
                   <span className="material-symbols-outlined"></span>
                   Back
                 </button>
                 <button
-                  className="flex items-center justify-center gap-2 rounded-full border border-gray-600 px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-gray-800"
-                  onClick={() => navigate("/KycOtpPage")}
+                  onClick={handleNext}
+                  disabled={loading}
+                  className="flex items-center justify-center gap-2 rounded-full border border-gray-600 px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <span className="material-symbols-outlined"></span>
-                  Next
+                  {loading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined"></span>
+                      Next
+                    </>
+                  )}
                 </button>
               </div>
 

@@ -1,11 +1,94 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 export default function EmergencyContacts() {
   const navigate = useNavigate();
+  const [emergencyContacts, setEmergencyContacts] = useState([
+    { name: "", relation: "", phone: "" },
+    { name: "", relation: "", phone: "" }
+  ]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
 
-  const handleNext = () => {
-    navigate("/tripdetails"); // Redirect to TripDetails page
+  useEffect(() => {
+    // Check if user is authenticated
+    const checkAuth = async () => {
+      try {
+        const response = await axios.get('http://localhost:3000/users/profile', {
+          withCredentials: true
+        });
+        if (response.data.success) {
+          setIsAuthenticated(true);
+        } else {
+          navigate("/login");
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        navigate("/login");
+      } finally {
+        setAuthLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, [navigate]);
+
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#111714]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null; // Will redirect to login
+  }
+
+  const handleContactChange = (index, field, value) => {
+    const updatedContacts = [...emergencyContacts];
+    updatedContacts[index][field] = value;
+    setEmergencyContacts(updatedContacts);
+  };
+
+  const handleNext = async () => {
+    setError("");
+    setLoading(true);
+
+    // Validate emergency contacts
+    const validContacts = emergencyContacts.filter(contact => 
+      contact.name.trim() && contact.relation.trim() && contact.phone.trim()
+    );
+
+    if (validContacts.length === 0) {
+      setError("Please provide at least one emergency contact");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      // Update user profile with emergency contacts
+      const response = await axios.put('http://localhost:3000/users/profile', {
+        emergencyContacts: validContacts
+      }, {
+        withCredentials: true
+      });
+
+      if (response.data.success) {
+        console.log('Emergency contacts updated:', response.data);
+        navigate("/tripdetails"); // Redirect to TripDetails page
+      } else {
+        setError(response.data.message || "Failed to save emergency contacts");
+      }
+    } catch (error) {
+      console.error('Error updating emergency contacts:', error);
+      setError("Failed to save emergency contacts. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -23,6 +106,12 @@ export default function EmergencyContacts() {
               <h1 className="text-4xl font-bold tracking-tighter text-white sm:text-5xl">Emergency Contacts</h1>
               <p className="mt-4 text-gray-300">Please provide details for two emergency contacts.</p>
             </div>
+
+            {error && (
+              <div className="bg-red-500/20 border border-red-500 text-red-200 px-4 py-3 rounded-lg">
+                {error}
+              </div>
+            )}
 
             {/* Step Indicator */}
             <div className="flex items-center justify-center space-x-4">
@@ -54,17 +143,23 @@ export default function EmergencyContacts() {
                 <h3 className="mb-4 text-lg font-semibold text-white">Emergency Contact 1</h3>
                 <div className="space-y-4">
                   <input
-                    className="w-full rounded-full border-gray-600 bg-gray-900/50 px-4 py-3 text-white placeholder-gray-400 focus:border-[#38e07b] focus:ring-[#38e07b]"
+                    value={emergencyContacts[0].name}
+                    onChange={(e) => handleContactChange(0, 'name', e.target.value)}
+                    className="w-full rounded-full border-gray-600 bg-gray-900/50 px-4 py-3 text-white placeholder-gray-400 focus:border-[#38e07b] focus:ring-[#38e07b] focus:outline-none"
                     placeholder="Full Name"
                     type="text"
                   />
                   <input
-                    className="w-full rounded-full border-gray-600 bg-gray-900/50 px-4 py-3 text-white placeholder-gray-400 focus:border-[#38e07b] focus:ring-[#38e07b]"
-                    placeholder="Relation"
+                    value={emergencyContacts[0].relation}
+                    onChange={(e) => handleContactChange(0, 'relation', e.target.value)}
+                    className="w-full rounded-full border-gray-600 bg-gray-900/50 px-4 py-3 text-white placeholder-gray-400 focus:border-[#38e07b] focus:ring-[#38e07b] focus:outline-none"
+                    placeholder="Relation (e.g., Father, Mother, Spouse)"
                     type="text"
                   />
                   <input
-                    className="w-full rounded-full border-gray-600 bg-gray-900/50 px-4 py-3 text-white placeholder-gray-400 focus:border-[#38e07b] focus:ring-[#38e07b]"
+                    value={emergencyContacts[0].phone}
+                    onChange={(e) => handleContactChange(0, 'phone', e.target.value)}
+                    className="w-full rounded-full border-gray-600 bg-gray-900/50 px-4 py-3 text-white placeholder-gray-400 focus:border-[#38e07b] focus:ring-[#38e07b] focus:outline-none"
                     placeholder="Phone Number"
                     type="tel"
                   />
@@ -76,17 +171,23 @@ export default function EmergencyContacts() {
                 <h3 className="mb-4 text-lg font-semibold text-white">Emergency Contact 2</h3>
                 <div className="space-y-4">
                   <input
-                    className="w-full rounded-full border-gray-600 bg-gray-900/50 px-4 py-3 text-white placeholder-gray-400 focus:border-[#38e07b] focus:ring-[#38e07b]"
+                    value={emergencyContacts[1].name}
+                    onChange={(e) => handleContactChange(1, 'name', e.target.value)}
+                    className="w-full rounded-full border-gray-600 bg-gray-900/50 px-4 py-3 text-white placeholder-gray-400 focus:border-[#38e07b] focus:ring-[#38e07b] focus:outline-none"
                     placeholder="Full Name"
                     type="text"
                   />
                   <input
-                    className="w-full rounded-full border-gray-600 bg-gray-900/50 px-4 py-3 text-white placeholder-gray-400 focus:border-[#38e07b] focus:ring-[#38e07b]"
-                    placeholder="Relation"
+                    value={emergencyContacts[1].relation}
+                    onChange={(e) => handleContactChange(1, 'relation', e.target.value)}
+                    className="w-full rounded-full border-gray-600 bg-gray-900/50 px-4 py-3 text-white placeholder-gray-400 focus:border-[#38e07b] focus:ring-[#38e07b] focus:outline-none"
+                    placeholder="Relation (e.g., Father, Mother, Spouse)"
                     type="text"
                   />
                   <input
-                    className="w-full rounded-full border-gray-600 bg-gray-900/50 px-4 py-3 text-white placeholder-gray-400 focus:border-[#38e07b] focus:ring-[#38e07b]"
+                    value={emergencyContacts[1].phone}
+                    onChange={(e) => handleContactChange(1, 'phone', e.target.value)}
+                    className="w-full rounded-full border-gray-600 bg-gray-900/50 px-4 py-3 text-white placeholder-gray-400 focus:border-[#38e07b] focus:ring-[#38e07b] focus:outline-none"
                     placeholder="Phone Number"
                     type="tel"
                   />
@@ -96,14 +197,25 @@ export default function EmergencyContacts() {
 
             {/* Buttons */}
             <div className="flex justify-between pt-4">
-              <button className="flex items-center justify-center gap-2 rounded-full border border-gray-600 px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-gray-800">
+              <button 
+                onClick={() => navigate("/register")}
+                className="flex items-center justify-center gap-2 rounded-full border border-gray-600 px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-gray-800"
+              >
                 Back
               </button>
               <button
                 onClick={handleNext}
-                className="lex items-center justify-center gap-2 rounded-full border border-gray-600 px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-gray-800">
-              
-                Next
+                disabled={loading}
+                className="flex items-center justify-center gap-2 rounded-full border border-gray-600 px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Saving...
+                  </>
+                ) : (
+                  "Next"
+                )}
               </button>
             </div>
 

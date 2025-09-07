@@ -1,12 +1,52 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const [formData, setFormData] = useState({
+    username: "",
+    password: ""
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleLogin = () => {
-    // Add actual login logic here if needed
-    navigate("/DigitalTouristId"); // Redirect to Digital Tourist ID page
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      const response = await axios.post('http://localhost:3000/users/login', {
+        username: formData.username,
+        password: formData.password
+      }, {
+        withCredentials: true // Important for session cookies
+      });
+
+      if (response.data.success) {
+        console.log('Login successful:', response.data);
+        // Store user data in localStorage for quick access
+        localStorage.setItem('user', JSON.stringify(response.data.data));
+        // Navigate to Digital Tourist ID page
+        navigate("/DigitalTouristId");
+      } else {
+        setError(response.data.message || "Login failed");
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setError(error.response?.data?.message || "Login failed. Please check your credentials.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -29,38 +69,75 @@ export default function LoginPage() {
               </h1>
             </div>
 
-            <div className="space-y-4">
-              {/* Email Input */}
+            {error && (
+              <div className="bg-red-500/20 border border-red-500 text-red-200 px-4 py-3 rounded-lg">
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={handleLogin} className="space-y-4">
+              {/* Username Input */}
               <div className="relative">
                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-            
+                  person
                 </span>
                 <input
-                  type="email"
-                  placeholder="Email"
-                  className="w-full rounded-full border border-gray-600 bg-transparent py-3 pl-12 pr-4 text-white placeholder-gray-400 focus:border-green-400 focus:ring-green-400"
+                  name="username"
+                  value={formData.username}
+                  onChange={handleInputChange}
+                  type="text"
+                  placeholder="Username"
+                  className="w-full rounded-full border border-gray-600 bg-transparent py-3 pl-12 pr-4 text-white placeholder-gray-400 focus:border-green-400 focus:ring-green-400 focus:outline-none"
+                  required
                 />
               </div>
 
               {/* Password Input */}
               <div className="relative">
                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                  lock
                 </span>
                 <input
+                  name="password"
+                  value={formData.password}
+                  onChange={handleInputChange}
                   type="password"
                   placeholder="Password"
-                  className="w-full rounded-full border border-gray-600 bg-transparent py-3 pl-12 pr-4 text-white placeholder-gray-400 focus:border-green-400 focus:ring-green-400"
+                  className="w-full rounded-full border border-gray-600 bg-transparent py-3 pl-12 pr-4 text-white placeholder-gray-400 focus:border-green-400 focus:ring-green-400 focus:outline-none"
+                  required
                 />
               </div>
 
               {/* Login Button */}
               <button
-                onClick={handleLogin}
-                className="flex w-full items-center justify-center gap-2 rounded-full border border-gray-600 bg-transparent py-3 text-sm font-bold text-white transition-colors hover:bg-gray-800"
+                type="submit"
+                disabled={loading}
+                className="flex w-full items-center justify-center gap-2 rounded-full border border-gray-600 bg-transparent py-3 text-sm font-bold text-white transition-colors hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <span className="material-symbols-outlined"></span>
-                Login
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Logging in...
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined">login</span>
+                    Login
+                  </>
+                )}
               </button>
+            </form>
+
+            <div className="text-center">
+              <p className="text-gray-300">
+                Don't have an account?{" "}
+                <button
+                  onClick={() => navigate("/register")}
+                  className="text-green-400 hover:text-green-300 underline"
+                >
+                  Sign up
+                </button>
+              </p>
             </div>
           </div>
         </div>
