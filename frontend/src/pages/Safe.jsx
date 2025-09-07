@@ -1,9 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import Layout from "../components/layout/Layout";
 import MapView from "../components/MapView";
 import axios from "axios";
-import { alertsAPI } from "../services/api";
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Checkbox } from "../components/ui/checkbox";
+import { alertsAPI, incidentsAPI } from "../services/api";
 
 export default function SafeTravels() {
   const navigate = useNavigate();
@@ -79,51 +84,83 @@ export default function SafeTravels() {
 
   const handleSOSClick = async () => {
     try {
-      // Create emergency incident
+      console.log('🚨 SOS Button Clicked');
+      console.log('🔐 User authentication status:', {
+        user: user?.username || user?.name,
+        userId: user?.id || user?._id,
+        isAuthenticated: !!user
+      });
+
+      // Check if user is authenticated
+      if (!user) {
+        console.error('❌ User not authenticated for SOS');
+        alert('You must be logged in to send an emergency alert.');
+        return;
+      }
+
+      // Create emergency incident using authenticated API
       const emergencyIncident = {
         description: "EMERGENCY SOS - Immediate assistance required",
         location: {
+          type: "Point",
           coordinates: [77.2090, 28.6139] // Current location or user's location
         },
         severity: "high"
       };
 
-      // Create incident first
-      const incidentResponse = await axios.post('http://localhost:3000/incidents', emergencyIncident);
+      console.log('📝 Creating emergency incident with data:', emergencyIncident);
+
+      // Create incident using authenticated API
+      const incidentResponse = await incidentsAPI.create(emergencyIncident);
       console.log('Emergency incident created:', incidentResponse.data);
 
-      // Create alert linked to the incident
+      // Create alert linked to the incident for ALL admin users
       if (incidentResponse.data.success && incidentResponse.data.data.incident) {
         const incidentId = incidentResponse.data.data.incident._id;
 
-        const alertData = {
-          title: "EMERGENCY SOS Alert",
-          message: "A tourist has triggered an emergency SOS signal. Immediate assistance required.",
-          type: "emergency",
-          priority: "high",
-          incident: incidentId,
-          location: emergencyIncident.location
-        };
-
         try {
-          await alertsAPI.create(alertData);
-          console.log('Emergency alert created');
+          // Create alerts for all admin users via authenticated API
+          const alertResponse = await alertsAPI.createEmergencySOS({
+            incidentId: incidentId,
+            location: emergencyIncident.location,
+            touristInfo: {
+              userId: user?.id || user?._id || 'unknown',
+              name: user?.name || user?.username || 'Unknown Tourist'
+            }
+          });
+
+          if (alertResponse.data.success) {
+            console.log('Emergency alerts created for admins:', alertResponse.data);
+          } else {
+            console.error('Failed to create emergency alerts:', alertResponse.data);
+          }
         } catch (alertError) {
-          console.error('Error creating emergency alert:', alertError);
-          // Don't fail the whole operation if alert creation fails
+          console.error('Error creating emergency alerts via SOS endpoint:', alertError);
+          // Try fallback method - create alert using authenticated API
+          try {
+            const alertData = {
+              message: `EMERGENCY SOS Alert: Tourist ${user?.name || user?.username || 'Unknown'} has triggered emergency SOS. Location: ${emergencyIncident.location.coordinates.join(', ')}`,
+              incident: incidentId,
+              priority: "high"
+            };
+            await alertsAPI.create(alertData);
+            console.log('Emergency alert created via fallback method');
+          } catch (fallbackError) {
+            console.error('Fallback alert creation also failed:', fallbackError);
+          }
         }
       }
 
       alert('Emergency alert sent! Help is on the way.');
     } catch (error) {
       console.error('Error creating emergency incident:', error);
-      alert('Emergency alert sent! Help is on the way.');
+      alert('Failed to send emergency alert. Please try again.');
     }
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-[var(--background-dark)] text-white">
+      <div className="flex items-center justify-center h-screen bg-[var(--background)] text-white">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
           <p>Loading map data...</p>
@@ -133,76 +170,11 @@ export default function SafeTravels() {
   }
 
   return (
-    <div className="bg-[var(--background-dark)] text-white">
-      <div className="flex h-screen w-full flex-col">
-        {/* Header */}
-        <header className="absolute top-0 z-20 w-full p-4">
-          <div className="mx-auto flex max-w-7xl items-center justify-between">
-            <div className="flex items-center gap-2">
-              <svg
-                className="h-8 w-8 text-[var(--primary-color)]"
-                fill="none"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-              >
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-              </svg>
-              <h1 className="text-2xl font-bold tracking-tight">SafeTravels</h1>
-            </div>
-            <nav className="hidden items-center gap-6 md:flex">
-              <button
-                className="text-sm font-medium text-white/80 transition-colors hover:text-white"
-                onClick={() => navigate("/")}
-              >
-                Home
-              </button>
-              <button
-                className="text-sm font-medium text-white/80 transition-colors hover:text-white"
-                onClick={() => navigate("/tripdetails")}
-              >
-                Trip Details
-              </button>
-              <button
-                className="text-sm font-medium text-white/80 transition-colors hover:text-white"
-                onClick={() => navigate("/emergency")}
-              >
-                Emergency
-              </button>
-              <button
-                className="text-sm font-medium text-white/80 transition-colors hover:text-white"
-                onClick={() => navigate("/DigitalTouristId")}
-              >
-                Digital ID
-              </button>
-            </nav>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center text-sm text-white/80">
-                <span>Welcome, {user?.name || user?.username}</span>
-              </div>
-              <button className="rounded-full p-2 transition-colors hover:bg-white/10">
-                <span className="material-symbols-outlined">notifications</span>
-              </button>
-              <button className="rounded-full p-2 transition-colors hover:bg-white/10">
-                <span className="material-symbols-outlined">person</span>
-              </button>
-              <button
-                onClick={handleLogout}
-                className="rounded-full p-2 transition-colors hover:bg-white/10"
-                title="Logout"
-              >
-                <span className="material-symbols-outlined">logout</span>
-              </button>
-            </div>
-          </div>
-        </header>
-
-        {/* Main Map Area */}
-        <main className="relative flex-1">
-          {/* Interactive Map */}
-          <div className="absolute inset-0">
+    <Layout showFooter={false}>
+      <div className="relative flex flex-col h-full min-h-0 bg-[var(--background)] text-white">
+        {/* Map container fills available space below the app header */}
+        <div className="relative flex-1 min-h-0 overflow-hidden">
+          <div className="absolute inset-0 z-0">
             <MapView
               incidents={incidents}
               geofences={geofences}
@@ -215,266 +187,197 @@ export default function SafeTravels() {
             />
           </div>
 
-          {/* Map Controls Overlay */}
-          <div className="absolute top-20 right-4 z-10">
-            <div className="bg-white/90 backdrop-blur-sm rounded-lg p-4 shadow-lg">
-              <h4 className="text-sm font-semibold text-gray-800 mb-3">Map Legend</h4>
-              <div className="space-y-2 text-xs">
-                <div className="flex items-center">
-                  <div className="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
-                  <span className="text-gray-700">Your Location</span>
+          {/* Map Legend */}
+          <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-[1000] w-56">
+            <Card className="bg-white/95 text-gray-900 shadow-lg">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-semibold">Map Legend</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="space-y-2 text-xs">
+                  <div className="flex items-center">
+                    <div className="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
+                    <span>Your Location</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
+                    <span>High Severity</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
+                    <span>Medium Severity</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                    <span>Low Severity</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-3 h-3 border-2 border-red-500 rounded-full mr-2"></div>
+                    <span>Danger Zones</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-3 h-3 border-2 border-yellow-500 rounded-full mr-2"></div>
+                    <span>Warning Zones</span>
+                  </div>
                 </div>
-                <div className="flex items-center">
-                  <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
-                  <span className="text-gray-700">High Severity</span>
-                </div>
-                <div className="flex items-center">
-                  <div className="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
-                  <span className="text-gray-700">Medium Severity</span>
-                </div>
-                <div className="flex items-center">
-                  <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
-                  <span className="text-gray-700">Low Severity</span>
-                </div>
-                <div className="flex items-center">
-                  <div className="w-3 h-3 border-2 border-red-500 rounded-full mr-2"></div>
-                  <span className="text-gray-700">Danger Zones</span>
-                </div>
-                <div className="flex items-center">
-                  <div className="w-3 h-3 border-2 border-yellow-500 rounded-full mr-2"></div>
-                  <span className="text-gray-700">Warning Zones</span>
-                </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           </div>
 
-          {/* Left side panel */}
-          <div className="absolute left-4 top-20 w-80 space-y-4 z-10">
-            {/* Search bar */}
-            <div className="flex items-center rounded-full bg-[var(--surface-dark)]/80 backdrop-blur-sm shadow-lg">
-              <div className="pl-4 text-white/60">
-                <span className="material-symbols-outlined">search</span>
-              </div>
-              <input
-                className="w-full flex-1 appearance-none border-none bg-transparent py-3 pl-2 pr-4 text-white placeholder-white/60 focus:outline-none focus:ring-0"
-                placeholder="Search for a location"
-                type="text"
-              />
-            </div>
+          {/* Left side tools */}
+          <div className="absolute left-4 top-4 sm:left-6 sm:top-6 z-[1000] w-80 space-y-4 max-w-[90vw]">
+            <Card className="bg-black/40 text-white border-white/10 backdrop-blur">
+              <CardContent className="pt-4">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-white/70">search</span>
+                  <Input className="bg-transparent border-white/20 text-white placeholder:text-white/60"
+                         placeholder="Search for a location" />
+                </div>
+              </CardContent>
+            </Card>
 
-            {/* Map Layers */}
-            <div className="space-y-2 rounded-xl bg-[var(--surface-dark)]/80 p-4 backdrop-blur-sm shadow-lg">
-              <h3 className="font-semibold">Map Layers</h3>
-              <div className="space-y-3 pt-2">
-                {/* High-Alert Zones */}
-                <label className="flex items-center justify-between">
-                  <span className="text-sm">High-Alert Zones</span>
-                  <button
-                    aria-checked="false"
-                    className="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-gray-600 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)] focus:ring-offset-2 focus:ring-offset-[var(--surface-dark)]"
-                    role="switch"
-                    type="button"
-                  >
-                    <span className="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
-                  </button>
+            <Card className="bg-black/40 text-white border-white/10 backdrop-blur">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Map Layers</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0 space-y-3">
+                <label className="flex items-center justify-between text-sm">
+                  <span>High-Alert Zones</span>
+                  <Checkbox />
                 </label>
-
-                {/* Safe Routes */}
-                <label className="flex items-center justify-between">
-                  <span className="text-sm">Safe Routes</span>
-                  <button
-                    aria-checked="true"
-                    className="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-[var(--primary-color)] transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)] focus:ring-offset-2 focus:ring-offset-[var(--surface-dark)]"
-                    role="switch"
-                    type="button"
-                  >
-                    <span className="pointer-events-none inline-block h-5 w-5 translate-x-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
-                  </button>
+                <label className="flex items-center justify-between text-sm">
+                  <span>Safe Routes</span>
+                  <Checkbox defaultChecked />
                 </label>
-
-                {/* Police Stations */}
-                <label className="flex items-center justify-between">
-                  <span className="text-sm">Police Stations</span>
-                  <button
-                    aria-checked="false"
-                    className="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-gray-600 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)] focus:ring-offset-2 focus:ring-offset-[var(--surface-dark)]"
-                    role="switch"
-                    type="button"
-                  >
-                    <span className="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
-                  </button>
+                <label className="flex items-center justify-between text-sm">
+                  <span>Police Stations</span>
+                  <Checkbox />
                 </label>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           </div>
 
-          {/* Right side controls */}
-          <div className="absolute bottom-4 right-4 flex flex-col items-end gap-4 z-10">
-            <div className="flex flex-col gap-2">
-              <div className="flex flex-col overflow-hidden rounded-full bg-[var(--surface-dark)]/80 shadow-lg backdrop-blur-sm">
-                <button className="p-3 transition-colors hover:bg-white/10">
+          {/* Right side controls + SOS */}
+          <div className="absolute bottom-4 right-4 sm:bottom-6 sm:right-6 z-[1000] flex flex-col items-end gap-4">
+            <Card className="bg-black/40 text-white border-white/10 backdrop-blur p-2">
+              <div className="flex flex-col">
+                <Button size="icon" variant="ghost" className="text-white hover:bg-white/10">
                   <span className="material-symbols-outlined">add</span>
-                </button>
-                <div className="h-px bg-white/20"></div>
-                <button className="p-3 transition-colors hover:bg-white/10">
+                </Button>
+                <div className="h-px bg-white/20 my-1"></div>
+                <Button size="icon" variant="ghost" className="text-white hover:bg-white/10">
                   <span className="material-symbols-outlined">remove</span>
-                </button>
+                </Button>
               </div>
-              <button className="rounded-full bg-[var(--surface-dark)]/80 p-3 shadow-lg backdrop-blur-sm transition-colors hover:bg-white/10">
-                <span className="material-symbols-outlined">near_me</span>
-              </button>
-            </div>
-            {/* SOS Button */}
-            <button 
+            </Card>
+            <Button size="icon" variant="secondary" className="rounded-full h-12 w-12 bg-black/40 text-white border border-white/10 backdrop-blur">
+              <span className="material-symbols-outlined">near_me</span>
+            </Button>
+
+            <Button
               onClick={handleSOSClick}
-              className="group flex h-24 w-24 items-center justify-center rounded-full bg-red-600 shadow-2xl shadow-red-900/50 transition-transform hover:scale-105"
+              variant="destructive"
+              className="h-16 w-16 sm:h-20 sm:w-20 md:h-24 md:w-24 rounded-full shadow-2xl shadow-red-900/50 text-white"
             >
-              <div className="flex flex-col items-center text-white">
-                <span className="material-symbols-outlined text-4xl">sos</span>
-                <span className="text-lg font-bold tracking-wider">SOS</span>
+              <div className="flex flex-col items-center">
+                <span className="material-symbols-outlined text-2xl sm:text-3xl md:text-4xl">sos</span>
+                <span className="text-sm sm:text-base md:text-lg font-bold tracking-wider">SOS</span>
               </div>
-            </button>
+            </Button>
           </div>
 
           {/* Emergency Contacts */}
-          <div className="absolute bottom-4 left-4 w-80 z-10">
-            <div className="rounded-xl bg-[var(--surface-dark)]/80 p-4 backdrop-blur-sm shadow-lg">
-              <h3 className="font-semibold">Emergency Contacts</h3>
-              <div className="mt-3 space-y-3">
-                {/* Police */}
+          <div className="absolute bottom-4 left-4 sm:bottom-6 sm:left-6 z-[1000] w-80 max-w-[90vw]">
+            <Card className="bg-black/40 text-white border-white/10 backdrop-blur">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Emergency Contacts</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <span className="material-symbols-outlined text-red-400">
-                      local_police
-                    </span>
+                    <span className="material-symbols-outlined text-red-400">local_police</span>
                     <span className="text-sm">Local Police</span>
                   </div>
-                  <button className="rounded-full p-2 transition-colors hover:bg-white/10">
+                  <Button size="icon" variant="ghost" className="text-white hover:bg-white/10">
                     <span className="material-symbols-outlined">call</span>
-                  </button>
+                  </Button>
                 </div>
-
-                {/* Embassy */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <span className="material-symbols-outlined text-blue-400">
-                      apartment
-                    </span>
+                    <span className="material-symbols-outlined text-blue-400">apartment</span>
                     <span className="text-sm">Embassy</span>
                   </div>
-                  <button className="rounded-full p-2 transition-colors hover:bg-white/10">
+                  <Button size="icon" variant="ghost" className="text-white hover:bg-white/10">
                     <span className="material-symbols-outlined">call</span>
-                  </button>
+                  </Button>
                 </div>
-
-                {/* Mom */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <span className="material-symbols-outlined text-green-400">
-                      family_restroom
-                    </span>
+                    <span className="material-symbols-outlined text-green-400">family_restroom</span>
                     <span className="text-sm">Mom</span>
                   </div>
-                  <button className="rounded-full p-2 transition-colors hover:bg-white/10">
+                  <Button size="icon" variant="ghost" className="text-white hover:bg-white/10">
                     <span className="material-symbols-outlined">call</span>
-                  </button>
+                  </Button>
                 </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Selected Item Details */}
           {(selectedIncident || selectedGeofence) && (
-            <div className="absolute top-20 left-4 w-80 z-10">
-              <div className="bg-white/90 backdrop-blur-sm rounded-lg p-4 shadow-lg">
-                {selectedIncident && (
-                  <div>
-                    <h4 className="font-semibold text-gray-800 mb-2">Selected Incident</h4>
-                    <p className="text-sm text-gray-700"><strong>Description:</strong> {selectedIncident.description}</p>
-                    <p className="text-sm text-gray-700"><strong>Severity:</strong> 
-                      <span className={`ml-1 px-2 py-1 rounded text-xs ${
-                        selectedIncident.severity === 'high' ? 'bg-red-100 text-red-800' :
-                        selectedIncident.severity === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-green-100 text-green-800'
-                      }`}>
-                        {selectedIncident.severity?.toUpperCase()}
-                      </span>
-                    </p>
-                    <p className="text-sm text-gray-700"><strong>Status:</strong> {selectedIncident.status}</p>
-                    <p className="text-sm text-gray-700"><strong>Address:</strong> {selectedIncident.address}</p>
-                    <button 
-                      onClick={() => setSelectedIncident(null)}
-                      className="mt-2 px-3 py-1 bg-gray-500 text-white text-xs rounded hover:bg-gray-600"
-                    >
-                      Close
-                    </button>
-                  </div>
-                )}
-                {selectedGeofence && (
-                  <div>
-                    <h4 className="font-semibold text-gray-800 mb-2">Selected Geofence</h4>
-                    <p className="text-sm text-gray-700"><strong>Alert Type:</strong> 
-                      <span className={`ml-1 px-2 py-1 rounded text-xs ${
-                        selectedGeofence.alertType === 'danger' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {selectedGeofence.alertType?.toUpperCase()}
-                      </span>
-                    </p>
-                    <p className="text-sm text-gray-700"><strong>Radius:</strong> {selectedGeofence.radius}m</p>
-                    <p className="text-sm text-gray-700"><strong>Status:</strong> 
-                      <span className={`ml-1 px-2 py-1 rounded text-xs ${
-                        selectedGeofence.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {selectedGeofence.active ? 'ACTIVE' : 'INACTIVE'}
-                      </span>
-                    </p>
-                    <button 
-                      onClick={() => setSelectedGeofence(null)}
-                      className="mt-2 px-3 py-1 bg-gray-500 text-white text-xs rounded hover:bg-gray-600"
-                    >
-                      Close
-                    </button>
-                  </div>
-                )}
-              </div>
+            <div className="absolute top-6 left-6 translate-y-[calc(100%+16px)] sm:translate-y-0 z-[1000] w-80 max-w-[90vw]">
+              <Card className="bg-white/95 text-gray-900 shadow-lg">
+                <CardContent>
+                  {selectedIncident && (
+                    <div>
+                      <h4 className="font-semibold text-gray-800 mb-2">Selected Incident</h4>
+                      <p className="text-sm text-gray-700"><strong>Description:</strong> {selectedIncident.description}</p>
+                      <p className="text-sm text-gray-700"><strong>Severity:</strong>
+                        <span className={`ml-1 px-2 py-1 rounded text-xs ${
+                          selectedIncident.severity === 'high' ? 'bg-red-100 text-red-800' :
+                          selectedIncident.severity === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-green-100 text-green-800'
+                        }`}>
+                          {selectedIncident.severity?.toUpperCase()}
+                        </span>
+                      </p>
+                      <p className="text-sm text-gray-700"><strong>Status:</strong> {selectedIncident.status}</p>
+                      <p className="text-sm text-gray-700"><strong>Address:</strong> {selectedIncident.address}</p>
+                      <Button onClick={() => setSelectedIncident(null)} size="sm" variant="secondary" className="mt-2">
+                        Close
+                      </Button>
+                    </div>
+                  )}
+                  {selectedGeofence && (
+                    <div>
+                      <h4 className="font-semibold text-gray-800 mb-2">Selected Geofence</h4>
+                      <p className="text-sm text-gray-700"><strong>Alert Type:</strong>
+                        <span className={`ml-1 px-2 py-1 rounded text-xs ${
+                          selectedGeofence.alertType === 'danger' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {selectedGeofence.alertType?.toUpperCase()}
+                        </span>
+                      </p>
+                      <p className="text-sm text-gray-700"><strong>Radius:</strong> {selectedGeofence.radius}m</p>
+                      <p className="text-sm text-gray-700"><strong>Status:</strong>
+                        <span className={`ml-1 px-2 py-1 rounded text-xs ${
+                          selectedGeofence.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {selectedGeofence.active ? 'ACTIVE' : 'INACTIVE'}
+                        </span>
+                      </p>
+                      <Button onClick={() => setSelectedGeofence(null)} size="sm" variant="secondary" className="mt-2">
+                        Close
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
           )}
-        </main>
-
-        {/* Footer */}
-        <footer className="absolute bottom-0 z-20 w-full p-2 md:hidden">
-          <nav className="flex justify-around rounded-full border border-white/10 bg-[var(--background-dark)]/80 p-2 backdrop-blur-sm">
-            <button
-              className="flex flex-col items-center gap-1 rounded-lg px-4 py-1 text-[var(--primary-color)] transition-colors"
-              onClick={() => navigate("/")}
-            >
-              <span className="material-symbols-outlined">home</span>
-              <span className="text-xs font-medium">Home</span>
-            </button>
-            <button
-              className="flex flex-col items-center gap-1 rounded-lg px-4 py-1 text-white/60 transition-colors hover:bg-white/10"
-              onClick={() => navigate("/tripdetails")}
-            >
-              <span className="material-symbols-outlined">explore</span>
-              <span className="text-xs font-medium">Trip</span>
-            </button>
-            <button
-              className="flex flex-col items-center gap-1 rounded-lg px-4 py-1 text-white/60 transition-colors hover:bg-white/10"
-              onClick={() => navigate("/emergency")}
-            >
-              <span className="material-symbols-outlined">emergency</span>
-              <span className="text-xs font-medium">Emergency</span>
-            </button>
-            <button
-              className="flex flex-col items-center gap-1 rounded-lg px-4 py-1 text-white/60 transition-colors hover:bg-white/10"
-              onClick={() => navigate("/DigitalTouristId")}
-            >
-              <span className="material-symbols-outlined">badge</span>
-              <span className="text-xs font-medium">ID</span>
-            </button>
-          </nav>
-        </footer>
+        </div>
       </div>
-    </div>
+    </Layout>
   );
 }

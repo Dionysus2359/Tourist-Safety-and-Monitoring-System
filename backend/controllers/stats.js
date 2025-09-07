@@ -8,8 +8,6 @@ const Incident = require('../models/incident');
  */
 const getDashboardStats = async (req, res, next) => {
     try {
-        console.log('📊 Getting dashboard stats for admin');
-
         // Get all statistics in parallel for better performance
         const [
             totalUsers,
@@ -18,15 +16,12 @@ const getDashboardStats = async (req, res, next) => {
             totalGeofences,
             activeGeofences,
             totalIncidents,
-            todayIncidents,
-            yesterdayIncidents,
-            lastMonthIncidents,
-            thisMonthIncidents,
+            recentIncidents,
             recentUsers,
             recentAlerts
         ] = await Promise.all([
             // Users stats
-            User.countDocuments({ role: { $ne: 'admin' } }), // Exclude admin users from tourist count
+            User.countDocuments({ role: { $ne: 'admin' } }),
 
             // Alerts stats
             Alert.countDocuments(),
@@ -39,104 +34,40 @@ const getDashboardStats = async (req, res, next) => {
             // Incidents stats
             Incident.countDocuments(),
             Incident.countDocuments({
-                createdAt: {
-                    $gte: new Date().setHours(0, 0, 0, 0), // Start of today
-                    $lt: new Date().setHours(23, 59, 59, 999) // End of today
-                }
-            }),
-            Incident.countDocuments({
-                createdAt: {
-                    $gte: new Date(Date.now() - 24 * 60 * 60 * 1000).setHours(0, 0, 0, 0), // Start of yesterday
-                    $lt: new Date(Date.now() - 24 * 60 * 60 * 1000).setHours(23, 59, 59, 999) // End of yesterday
-                }
-            }),
-            Incident.countDocuments({
-                createdAt: {
-                    $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1), // Start of last month
-                    $lt: new Date(new Date().getFullYear(), new Date().getMonth(), 1) // Start of this month
-                }
-            }),
-            Incident.countDocuments({
-                createdAt: {
-                    $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) // Start of this month
-                }
+                createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
             }),
 
             // Recent users (last 30 days)
             User.countDocuments({
-                createdAt: {
-                    $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-                },
+                createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
                 role: { $ne: 'admin' }
             }),
 
             // Recent alerts (last 7 days)
             Alert.countDocuments({
-                createdAt: {
-                    $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-                }
+                createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
             })
         ]);
 
-        // Calculate percentage changes
-        const calculateChange = (current, previous) => {
-            if (previous === 0) return current > 0 ? '+100%' : '0%';
-            const change = ((current - previous) / previous) * 100;
-            const sign = change >= 0 ? '+' : '';
-            return `${sign}${Math.round(change)}%`;
-        };
-
-        // Build the stats object
+        // Calculate meaningful changes
         const stats = {
             totalTourists: {
                 value: totalUsers,
-                change: calculateChange(recentUsers, totalUsers - recentUsers)
+                change: totalUsers > 0 ? `${recentUsers} new this month` : '0%'
             },
             activeAlerts: {
                 value: unreadAlerts,
-                change: calculateChange(unreadAlerts, totalAlerts - unreadAlerts)
+                change: totalAlerts > 0 ? `${unreadAlerts} unread` : '0%'
             },
             safeZones: {
                 value: activeGeofences,
-                change: calculateChange(activeGeofences, totalGeofences - activeGeofences)
+                change: totalGeofences > 0 ? `${activeGeofences}/${totalGeofences} active` : '0%'
             },
             totalIncidents: {
                 value: totalIncidents,
-                change: calculateChange(thisMonthIncidents, lastMonthIncidents)
-            },
-            // Additional detailed stats
-            detailed: {
-                users: {
-                    total: totalUsers,
-                    recent30Days: recentUsers
-                },
-                alerts: {
-                    total: totalAlerts,
-                    unread: unreadAlerts,
-                    read: totalAlerts - unreadAlerts,
-                    recent7Days: recentAlerts
-                },
-                geofences: {
-                    total: totalGeofences,
-                    active: activeGeofences,
-                    inactive: totalGeofences - activeGeofences
-                },
-                incidents: {
-                    total: totalIncidents,
-                    today: todayIncidents,
-                    yesterday: yesterdayIncidents,
-                    thisMonth: thisMonthIncidents,
-                    lastMonth: lastMonthIncidents
-                }
+                change: totalIncidents > 0 ? `${recentIncidents} this week` : '0%'
             }
         };
-
-        console.log('✅ Dashboard stats calculated:', {
-            totalTourists: stats.totalTourists.value,
-            activeAlerts: stats.activeAlerts.value,
-            safeZones: stats.safeZones.value,
-            totalIncidents: stats.totalIncidents.value
-        });
 
         res.status(200).json({
             success: true,
@@ -145,7 +76,7 @@ const getDashboardStats = async (req, res, next) => {
         });
 
     } catch (error) {
-        console.error('❌ Error getting dashboard stats:', error);
+        console.error('Error getting dashboard stats:', error);
         next(error);
     }
 };

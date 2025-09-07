@@ -76,7 +76,7 @@ const isAdmin = async (req, res, next) => {
             });
         }
 
-        const User = require('./models/user');
+        const User = require('../models/user');
         const user = await User.findById(req.session.userId);
         
         if (!user) {
@@ -117,7 +117,7 @@ const isTourist = async (req, res, next) => {
             });
         }
 
-        const User = require('./models/user');
+        const User = require('../models/user');
         const user = await User.findById(req.session.userId);
         
         if (!user) {

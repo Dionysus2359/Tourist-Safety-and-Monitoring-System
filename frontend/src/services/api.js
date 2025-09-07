@@ -73,8 +73,10 @@ export const geofencesAPI = {
 
 export const alertsAPI = {
     getAll: () => api.get('/alerts'),
+    getAllAdmin: () => api.get('/alerts/admin/all'),
     getById: (id) => api.get(`/alerts/${id}`),
     create: (alertData) => api.post('/alerts', alertData),
+    createEmergencySOS: (sosData) => api.post('/alerts/emergency-sos', sosData),
     update: (id, alertData) => api.put(`/alerts/${id}`, alertData),
     markAsRead: (id) => api.put(`/alerts/${id}`, { read: true }),
 };

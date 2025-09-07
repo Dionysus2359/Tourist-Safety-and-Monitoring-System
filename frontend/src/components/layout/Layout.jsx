@@ -72,7 +72,7 @@ export default function Layout({ children, showFooter = true }) {
       )}
 
       {/* Main Content */}
-      <main className="flex-grow">
+      <main className="flex-1 min-h-0 flex flex-col">
         {children}
       </main>
 

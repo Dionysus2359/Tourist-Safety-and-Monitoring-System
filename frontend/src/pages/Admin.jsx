@@ -33,6 +33,8 @@ export default function Admin() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [alerts, setAlerts] = useState([]);
   const [alertsLoading, setAlertsLoading] = useState(false);
+  const [recentIncidents, setRecentIncidents] = useState([]);
+  const [recentIncidentsLoading, setRecentIncidentsLoading] = useState(false);
 
   console.log('🎯 Admin component rendered:', {
     user: user?.username,
@@ -90,25 +92,29 @@ export default function Admin() {
             title: "Total Tourists",
             value: statsData.totalTourists.value.toLocaleString(),
             icon: Users,
-            change: statsData.totalTourists.change
+            change: statsData.totalTourists.change,
+            trend: "up"
           },
           {
             title: "Active Alerts",
             value: statsData.activeAlerts.value.toString(),
             icon: AlertTriangle,
-            change: statsData.activeAlerts.change
+            change: statsData.activeAlerts.change,
+            trend: statsData.activeAlerts.value > 0 ? "warning" : "neutral"
           },
           {
             title: "Safe Zones",
             value: statsData.safeZones.value.toString(),
             icon: Shield,
-            change: statsData.safeZones.change
+            change: statsData.safeZones.change,
+            trend: statsData.safeZones.value > 0 ? "up" : "neutral"
           },
           {
             title: "Total Incidents",
             value: statsData.totalIncidents.value.toString(),
             icon: Activity,
-            change: statsData.totalIncidents.change
+            change: statsData.totalIncidents.change,
+            trend: "up"
           },
         ]);
       }
@@ -130,7 +136,10 @@ export default function Admin() {
   const fetchAlerts = useCallback(async () => {
     try {
       setAlertsLoading(true);
-      const response = await alertsAPI.getAll();
+      // Use admin endpoint if user is admin
+      const response = user?.role === 'admin'
+        ? await alertsAPI.getAllAdmin()
+        : await alertsAPI.getAll();
 
       if (response.data.success) {
         setAlerts(response.data.data.alerts || []);
@@ -141,12 +150,39 @@ export default function Admin() {
     } finally {
       setAlertsLoading(false);
     }
+  }, [user?.role]);
+
+  // Fetch recent incidents for the dashboard
+  const fetchRecentIncidents = useCallback(async () => {
+    try {
+      setRecentIncidentsLoading(true);
+      const response = await incidentsAPI.getAll();
+
+      if (response.data.success) {
+        // Get the most recent incidents (limit to 5 for dashboard)
+        const incidents = response.data.data.incidents || [];
+        const recentIncidents = incidents
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+          .slice(0, 5);
+        setRecentIncidents(recentIncidents);
+      }
+    } catch (error) {
+      console.error("Error fetching recent incidents:", error);
+      setRecentIncidents([]);
+    } finally {
+      setRecentIncidentsLoading(false);
+    }
   }, []);
 
   // Fetch stats on component mount - only once
   useEffect(() => {
     fetchStats();
   }, [fetchStats]);
+
+  // Fetch recent incidents on component mount
+  useEffect(() => {
+    fetchRecentIncidents();
+  }, [fetchRecentIncidents]);
 
   // Fetch alerts when alerts tab is selected
   useEffect(() => {
@@ -155,51 +191,20 @@ export default function Admin() {
     }
   }, [activeTab, fetchAlerts]);
 
-  const tourists = [
-    {
-      id: 1,
-      name: "Ethan Carter",
-      phone: "+1-555-123-4567",
-      email: "ethan.carter@email.com",
-      status: "active",
-      location: "Mumbai, India",
-      avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuBQYvI8dVqoLDW64wUG3n69sdFPSds4QcCm9hEexDCZtO0151Ws0DPH_D2oa6bgrHnIrnbwFuYNkvvjxdB3Zz5W5kx-8EFvOvBORUnoTWVKYavEclmBKfKaam7vhmW_xIrcPbGOG5oSDXc9IFZYZgFO1ihINqE5JrujS_ZXvcQHxeQ9lePxhpRUqMVsmCiGZx74JlLCym9voLV4xK0HSY2kQ-TUOBGP_StxAfQM_DdEFyCAdYkcsaOHqqhcVzvK3Ouj44-sYo7yng1l",
-      lastActive: "2 hours ago"
-    },
-    {
-      id: 2,
-      name: "Olivia Bennett",
-      phone: "+1-555-987-6543",
-      email: "olivia.bennett@email.com",
-      status: "active",
-      location: "Delhi, India",
-      avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuD6x2mxHyUnRwiP6DKeBoJ2M4fE4yIXgLJLthgyUCPUbCH-z8ixadIt8Txs_zEqjiLQHPCBknKSgqdmUeQIV7J6p3x2W2h0HYdam-3xMnEkCBmmiQoBGWtUvoI3DWb_iDZj1dt4ILz0yQJnMRlBzWmDGc1bEOJyafpfezQG3rxyeB0y0GkBrCNQbISQzTHzOYfL_1nqQAO53BT696hRzCabZgr7zKSjOVKyRnoKJQ3oqQJV85gO98xZ1JJ-X5izcpPUQYL_ErUzJZ6D",
-      lastActive: "5 minutes ago"
-    },
-    {
-      id: 3,
-      name: "Noah Thompson",
-      phone: "+1-555-246-8013",
-      email: "noah.thompson@email.com",
-      status: "inactive",
-      location: "Bangalore, India",
-      avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuDPxrWhsp-GuRzABV5BQ1OxI9MncQoJMs2mGxQPuSCUdiBzsEKUdcUmdGizQ_iXhSQVbgWD6e0oMO6mWtRSTPiW1Z_L-2WTIuDgHEvzALe59-4wsaG5Q_bv3ve_OzLc4LQBceBNMuoBHfK6eOLrhszJHJKPlw0J97ANp1DLwolzIlMaNjZTru5PpEa3YGWp5gzeDz0ai2hsB3ps6OErwHdCPOREuaqLW3nRFLiqmTMdjVaeHe0M6UlHgfTXdaRvwMKyRj6c3QkYpC3W",
-      lastActive: "1 day ago"
-    },
-    {
-      id: 4,
-      name: "Ava Rodriguez",
-      phone: "+1-555-369-1470",
-      email: "ava.rodriguez@email.com",
-      status: "active",
-      location: "Chennai, India",
-      avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuC51jHbwf9YzGzdIR3yT4gbStIXRjO10vnwbaWGZFiQ8Hd9C-aruYhvKZRQfuEefn9k_ouYpNYpcYkNHqSxkFvsfeWsNYw6UpMZpvAfEWnvti_ilK1LcdnDCz7P6ksuhdS-KgRnUMbTU7ZVQf6A3b_CDf3ma6GBzDkkplvveuv49eGzp1gi2QRcBfkovJJWwYsLsFaR4YgE4L-u8pQGDzAbajtCWT2ok73tN_7KBk9bncpBTuTDeEBaXs00i6LYxJkOr434YtwyfXAw",
-      lastActive: "30 minutes ago"
-    },
-  ];
+  // Auto-refresh alerts every 30 seconds when on alerts tab
+  useEffect(() => {
+    if (activeTab === "alerts") {
+      const interval = setInterval(() => {
+        fetchAlerts();
+      }, 30000); // 30 seconds
+
+      return () => clearInterval(interval);
+    }
+  }, [activeTab, fetchAlerts]);
+
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 px-3 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-background to-muted/20 px-3 sm:px-6 lg:px-8">
       {/* Header */}
       <div className="border-b bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50">
         <div className="flex h-14 sm:h-16 items-center px-3 sm:px-4">
@@ -225,7 +230,7 @@ export default function Admin() {
         </div>
       </div>
 
-      <div className="flex-1 space-y-4 py-6 sm:py-8 px-0">
+      <div className="flex-1 flex flex-col space-y-4 py-6 sm:py-8 px-0">
         <div className="flex items-center justify-between space-y-2">
           <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h2>
         </div>
@@ -247,10 +252,15 @@ export default function Admin() {
               <CardContent>
                 <div className="text-2xl font-bold">{statsLoading ? "..." : stat.value}</div>
                 <p className="text-xs text-muted-foreground">
-                  <span className={stat.change.startsWith('+') ? 'text-green-600' : 'text-red-600'}>
+                  <span className={
+                    stat.change.includes('unread') || stat.change.includes('active')
+                      ? 'text-orange-600'
+                      : stat.change.includes('new') || stat.change.includes('this week')
+                      ? 'text-blue-600'
+                      : 'text-gray-600'
+                  }>
                     {stat.change}
                   </span>
-                  {' '}from last month
                 </p>
               </CardContent>
             </Card>
@@ -268,18 +278,18 @@ export default function Admin() {
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="dashboard" className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+          <TabsContent value="dashboard" className="flex-1">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7 h-full">
               {/* Tourist Locations Map */}
-              <Card className="col-span-4">
+              <Card className="col-span-4 flex flex-col">
                 <CardHeader>
                   <CardTitle>Tourist Locations</CardTitle>
                   <CardDescription>
                     Real-time location tracking of all registered tourists
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="pl-2">
-                  <div className="rounded-lg overflow-hidden" style={{ height: '420px' }}>
+                <CardContent className="pl-2 flex-1">
+                  <div className="rounded-lg overflow-hidden h-full">
                     <TouristMap
                       style={{ height: '100%', width: '100%' }}
                       center={[20.5937, 78.9629]} // Center on India
@@ -290,50 +300,81 @@ export default function Admin() {
               </Card>
 
               {/* Recent Activity */}
-              <Card className="col-span-3">
+              <Card className="col-span-3 flex flex-col">
                 <CardHeader>
                   <CardTitle>Recent Activity</CardTitle>
                   <CardDescription>
                     Latest tourist check-ins and alerts
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-4">
-                    <div className="flex items-center">
-                      <Avatar className="h-9 w-9">
-                        <AvatarImage src={tourists[0].avatar} alt={tourists[0].name} />
-                        <AvatarFallback>{tourists[0].name.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                      <div className="ml-4 space-y-1">
-                        <p className="text-sm font-medium leading-none">
-                          {tourists[0].name} checked in
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {tourists[0].location}
-                        </p>
-                      </div>
-                      <div className="ml-auto font-medium text-sm">
-                        2h ago
+                <CardContent className="flex-1 overflow-y-auto">
+                  {recentIncidentsLoading ? (
+                    <div className="flex items-center justify-center h-full">
+                      <RefreshCw className="h-6 w-6 text-muted-foreground animate-spin" />
+                    </div>
+                  ) : recentIncidents.length === 0 ? (
+                    <div className="flex items-center justify-center h-full text-center">
+                      <div>
+                        <Activity className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                        <p className="text-muted-foreground">No recent activity</p>
                       </div>
                     </div>
-                    <div className="flex items-center">
-                      <Avatar className="h-9 w-9">
-                        <AvatarImage src={tourists[1].avatar} alt={tourists[1].name} />
-                        <AvatarFallback>{tourists[1].name.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                      <div className="ml-4 space-y-1">
-                        <p className="text-sm font-medium leading-none">
-                          {tourists[1].name} updated location
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {tourists[1].location}
-                        </p>
-                      </div>
-                      <div className="ml-auto font-medium text-sm">
-                        5m ago
-                      </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {recentIncidents.map((incident, index) => {
+                        const timeAgo = new Date() - new Date(incident.createdAt);
+                        const minutes = Math.floor(timeAgo / (1000 * 60));
+                        const hours = Math.floor(timeAgo / (1000 * 60 * 60));
+                        const days = Math.floor(timeAgo / (1000 * 60 * 60 * 24));
+
+                        let timeString;
+                        if (days > 0) {
+                          timeString = `${days}d ago`;
+                        } else if (hours > 0) {
+                          timeString = `${hours}h ago`;
+                        } else if (minutes > 0) {
+                          timeString = `${minutes}m ago`;
+                        } else {
+                          timeString = "Just now";
+                        }
+
+                        return (
+                          <div key={incident._id || index} className="flex items-start space-x-4">
+                            <div className={`p-2 rounded-full ${
+                              incident.severity === 'high' ? 'bg-red-100 text-red-600' :
+                              incident.severity === 'medium' ? 'bg-yellow-100 text-yellow-600' :
+                              'bg-blue-100 text-blue-600'
+                            }`}>
+                              <AlertTriangle className="h-4 w-4" />
+                            </div>
+                            <div className="flex-1 space-y-1">
+                              <p className="text-sm font-medium leading-none">
+                                {incident.description || 'New incident reported'}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {incident.address || 'Location unknown'}
+                              </p>
+                              <div className="flex items-center space-x-2">
+                                <Badge
+                                  variant={
+                                    incident.severity === 'high' ? 'destructive' :
+                                    incident.severity === 'medium' ? 'secondary' :
+                                    'outline'
+                                  }
+                                  className="text-xs"
+                                >
+                                  {incident.severity?.toUpperCase() || 'LOW'}
+                                </Badge>
+                                <span className="text-xs text-muted-foreground">
+                                  {timeString}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -491,6 +532,25 @@ export default function Admin() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Footer */}
+      <footer className="mt-auto border-t bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50">
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <div className="flex items-center space-x-2 mb-4 md:mb-0">
+              <Shield className="h-5 w-5 text-primary" />
+              <span className="text-sm text-muted-foreground">
+                © 2024 SafeTravels Admin. All rights reserved.
+              </span>
+            </div>
+            <div className="flex space-x-6 text-sm text-muted-foreground">
+              <a href="#" className="hover:text-primary transition-colors">Privacy Policy</a>
+              <a href="#" className="hover:text-primary transition-colors">Terms of Service</a>
+              <a href="#" className="hover:text-primary transition-colors">Support</a>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

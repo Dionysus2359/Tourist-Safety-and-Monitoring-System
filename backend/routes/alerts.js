@@ -130,8 +130,72 @@ router.get('/admin/stats',
     })
 );
 
+// POST /alerts/emergency-sos - Create emergency SOS alerts for all admin users
+router.post('/emergency-sos',
+    isLoggedIn,
+    asyncHandler(async (req, res, next) => {
+        try {
+            const { incidentId, location, touristInfo } = req.body;
+
+            // Validate required fields
+            if (!incidentId) {
+                const error = require('../utils/helpers').createErrorResponse(400, "Incident ID is required");
+                return res.status(error.statusCode).json(error.response);
+            }
+
+            // Get all admin users
+            const User = require('../models/user');
+            const adminUsers = await User.find({ role: 'admin' });
+
+            if (adminUsers.length === 0) {
+                const error = require('../utils/helpers').createErrorResponse(404, "No admin users found");
+                return res.status(error.statusCode).json(error.response);
+            }
+
+            const Alert = require('../models/alert');
+
+            // Create alerts for all admin users
+            const alertsCreated = [];
+            for (const admin of adminUsers) {
+                try {
+                    const alert = new Alert({
+                        user: admin._id,
+                        title: "🚨 EMERGENCY SOS ALERT",
+                        message: `URGENT: Tourist ${touristInfo?.name || 'Unknown'} has triggered an emergency SOS signal! Location: ${location?.coordinates ? location.coordinates.join(', ') : 'Unknown'}. Immediate assistance required.`,
+                        incident: incidentId,
+                        read: false,
+                        priority: "high",
+                        type: "emergency"
+                    });
+
+                    await alert.save();
+                    alertsCreated.push({
+                        alertId: alert._id,
+                        adminId: admin._id,
+                        adminName: admin.name,
+                        adminEmail: admin.email
+                    });
+                } catch (alertError) {
+                    console.error(`Failed to create alert for admin ${admin._id}:`, alertError);
+                }
+            }
+
+            const success = require('../utils/helpers').createSuccessResponse(201, `${alertsCreated.length} emergency alerts created successfully`, {
+                alertsCreated,
+                totalAdmins: adminUsers.length,
+                incidentId
+            });
+            res.status(success.statusCode).json(success.response);
+
+        } catch (error) {
+            console.error('Create emergency SOS alerts error:', error);
+            next(error);
+        }
+    })
+);
+
 // GET /alerts/admin/search - Search alerts with advanced filters (admin only)
-router.get('/admin/search', 
+router.get('/admin/search',
     isLoggedIn,
     isAdmin,
     asyncHandler(async (req, res, next) => {
