@@ -1,4 +1,4 @@
-const { validateRequest } = require('./schemas');
+const { validateRequest } = require('../schemas');
 
 /**
  * Centralized Error Handler Middleware
@@ -25,9 +25,19 @@ const errorHandler = (err, req, res, next) => {
  * Checks if user is authenticated using session
  */
 const isLoggedIn = (req, res, next) => {
+    console.log('Session check:', {
+        hasSession: !!req.session,
+        userId: req.session?.userId,
+        userUsername: req.session?.userUsername,
+        sessionID: req.sessionID,
+        cookies: req.headers.cookie
+    });
+
     if (req.session && req.session.userId) {
+        console.log('✅ User authenticated:', req.session.userId);
         return next();
     } else {
+        console.log('❌ User not authenticated - no valid session');
         return res.status(401).json({
             success: false,
             message: "Authentication required. Please log in.",
@@ -66,7 +76,7 @@ const isAdmin = async (req, res, next) => {
             });
         }
 
-        const User = require('./models/user');
+        const User = require('../models/user');
         const user = await User.findById(req.session.userId);
         
         if (!user) {
@@ -107,7 +117,7 @@ const isTourist = async (req, res, next) => {
             });
         }
 
-        const User = require('./models/user');
+        const User = require('../models/user');
         const user = await User.findById(req.session.userId);
         
         if (!user) {
@@ -179,32 +189,8 @@ const requestLogger = (req, res, next) => {
     next();
 };
 
-/**
- * CORS Configuration Middleware
- * Handles Cross-Origin Resource Sharing
- */
-const corsOptions = {
-    origin: function (origin, callback) {
-        // Allow requests with no origin (mobile apps, curl, etc.)
-        if (!origin) return callback(null, true);
-        
-        // Add your allowed origins here
-        const allowedOrigins = [
-            'http://localhost:3000',
-            'http://localhost:5173',
-            'http://127.0.0.1:3000',
-            'http://127.0.0.1:5173'
-        ];
-        
-        if (allowedOrigins.indexOf(origin) !== -1) {
-            callback(null, true);
-        } else {
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
-    credentials: true,
-    optionsSuccessStatus: 200
-};
+// Import CORS configuration from config file
+const corsOptions = require('../config/cors');
 
 /**
  * Rate Limiting Middleware (Basic Implementation)

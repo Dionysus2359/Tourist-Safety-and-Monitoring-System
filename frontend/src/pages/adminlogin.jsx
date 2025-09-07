@@ -1,21 +1,52 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
+import { ROUTES } from "../constants";
 
 const AdminLogin = () => {
   const navigate = useNavigate();
+  const { login, loading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
-  const handleLogin = () => {
-    if (email && password) {
-      navigate("/admin"); // Redirect to admin.jsx
+  const handleLogin = async () => {
+    setError("");
+    if (!email || !password) {
+      setError("Please enter email and password");
+      return;
+    }
+
+    console.log('🔐 Admin login attempt for:', email);
+
+    const result = await login({ email, password });
+    console.log('🔐 Admin login result:', result);
+
+    if (result.success) {
+      const userRole = result.user?.role;
+      console.log('🔐 User role:', userRole);
+
+      if (userRole === 'admin') {
+        console.log('✅ Admin login successful, redirecting to admin dashboard');
+        // Add a small delay to ensure AuthContext state is updated
+        setTimeout(() => {
+          console.log('🔀 Navigating to admin dashboard at:', new Date().toISOString());
+          console.log('🔀 Current location before navigation:', window.location.pathname);
+          navigate(ROUTES.ADMIN, { replace: true });
+          console.log('🔀 Navigation called, should redirect now');
+        }, 200); // Increased delay slightly
+      } else {
+        console.log('❌ User does not have admin role');
+        setError("You do not have admin access.");
+      }
     } else {
-      alert("Please enter email and password");
+      console.log('❌ Admin login failed:', result.message);
+      setError(result.message || "Login failed");
     }
   };
 
   return (
-    <div className="relative flex size-full min-h-screen flex-col dark justify-between group/design-root overflow-x-hidden" style={{ fontFamily: '"Spline Sans", "Noto Sans", sans-serif' }}>
+    <div className="relative flex size-full min-h-screen flex-col dark group/design-root overflow-x-hidden" style={{ fontFamily: '"Spline Sans", "Noto Sans", sans-serif' }}>
       <main className="flex-grow">
         <div
           className="flex h-screen flex-col items-center justify-center bg-cover bg-center bg-no-repeat p-4"
@@ -52,22 +83,27 @@ const AdminLogin = () => {
                   className="w-full rounded-full border border-gray-600 bg-transparent py-3 pl-12 pr-4 text-white placeholder-gray-400 focus:border-green-400 focus:ring-green-400"
                   placeholder="Password"
                   type="password"
+                  onKeyDown={(e) => { if (e.key === 'Enter') { handleLogin(); } }}
                 />
               </div>
 
+              {error && (
+                <div className="text-red-400 text-sm text-center">{error}</div>
+              )}
               <button
                 onClick={handleLogin}
-                className="flex w-full items-center justify-center gap-2 rounded-full bg-[#38e07b] py-3 text-sm font-bold text-white transition-colors hover:bg-green-400"
+                disabled={loading}
+                className="flex w-full items-center justify-center gap-2 rounded-full bg-[#38e07b] py-3 text-sm font-bold text-white transition-colors hover:bg-green-400 disabled:opacity-60"
               >
                 <span className="material-symbols-outlined"></span>
-                Login
+                {loading ? 'Signing in...' : 'Login'}
               </button>
             </div>
           </div>
         </div>
       </main>
 
-      <footer className="w-full bg-[#111714] py-8 text-center">
+      <footer className="mt-auto w-full bg-[#111714] py-8 text-center">
         <div className="container mx-auto px-4">
           <div className="mb-4 flex flex-wrap items-center justify-center gap-x-8 gap-y-4 text-sm">
             <a className="text-gray-400 hover:text-white" href="#">About Us</a>

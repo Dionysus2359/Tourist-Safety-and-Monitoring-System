@@ -1,4 +1,5 @@
 const axios = require('axios');
+require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
 
 /**
  * Get address from coordinates using MapTiler API with Nominatim fallback
@@ -26,13 +27,75 @@ const getAddressFromCoordinates = async (lat, lng) => {
             };
         }
 
-        // Try MapTiler API first if API key is available
+        // For Indian locations, try Nominatim first (better coverage for India)
+        // For other locations, try MapTiler first
+        const isIndianLocation = lng >= 68 && lng <= 97 && lat >= 6 && lat <= 37; // Approximate India bounds
+
+        if (isIndianLocation) {
+            console.log('Indian location detected, trying Nominatim first...');
+        } else {
+            console.log('Non-Indian location, trying MapTiler first...');
+        }
+
+        // Try Nominatim first for Indian locations
+        if (isIndianLocation) {
+            try {
+                console.log('Attempting reverse geocoding with Nominatim API (primary for India)...');
+
+                const nominatimResponse = await axios.get(
+                    'https://nominatim.openstreetmap.org/reverse',
+                    {
+                        params: {
+                            lat: lat,
+                            lon: lng,
+                            format: 'json',
+                            addressdetails: 1,
+                            zoom: 18
+                        },
+                        headers: {
+                            'User-Agent': 'TouristSafetyApp/1.0'
+                        },
+                        timeout: 10000 // 10 second timeout
+                    }
+                );
+
+                if (nominatimResponse.data && nominatimResponse.data.display_name) {
+                    let address = nominatimResponse.data.display_name;
+
+                    // Try to create a more readable address from address components
+                    const addressDetails = nominatimResponse.data.address || {};
+                    const components = [
+                        addressDetails.road || addressDetails.pedestrian,
+                        addressDetails.suburb || addressDetails.neighbourhood,
+                        addressDetails.city || addressDetails.town || addressDetails.village,
+                        addressDetails.state,
+                        addressDetails.country
+                    ].filter(Boolean);
+
+                    // Use structured address if available, otherwise use display_name
+                    if (components.length >= 2) {
+                        address = components.slice(0, 3).join(', '); // Limit to first 3 components for readability
+                    }
+
+                    console.log('Nominatim reverse geocoding successful:', address);
+                    return {
+                        success: true,
+                        message: 'Address retrieved successfully using Nominatim',
+                        data: { address }
+                    };
+                }
+            } catch (nominatimError) {
+                console.warn('Nominatim API failed for Indian location:', nominatimError.message);
+            }
+        }
+
+        // Try MapTiler API (primary for non-Indian locations, fallback for Indian)
         const mapTilerApiKey = process.env.MAPTILER_API_KEY;
-        
+
         if (mapTilerApiKey) {
             try {
                 console.log('Attempting reverse geocoding with MapTiler API...');
-                
+
                 const mapTilerResponse = await axios.get(
                     `https://api.maptiler.com/geocoding/${lng},${lat}.json`,
                     {
@@ -46,9 +109,34 @@ const getAddressFromCoordinates = async (lat, lng) => {
 
                 if (mapTilerResponse.data && mapTilerResponse.data.features && mapTilerResponse.data.features.length > 0) {
                     const feature = mapTilerResponse.data.features[0];
-                    const address = feature.properties?.label || feature.properties?.formatted_address || 'Address not found';
-                    
-                    console.log('MapTiler reverse geocoding successful');
+
+                    let address = feature.properties?.label || feature.properties?.formatted_address || feature.properties?.address_line1 || feature.properties?.place_name;
+
+                    // If still no address, try to construct one from available properties
+                    if (!address || address === 'Address not found' || address.startsWith('Location:')) {
+                        const components = [
+                            feature.properties?.address_line1,
+                            feature.properties?.address_line2,
+                            feature.properties?.locality || feature.properties?.city,
+                            feature.properties?.region || feature.properties?.state,
+                            feature.properties?.country
+                        ].filter(Boolean);
+
+                        // Try different property names for MapTiler
+                        if (components.length === 0) {
+                            const altComponents = [
+                                feature.properties?.name,
+                                feature.properties?.place_name,
+                                feature.properties?.text,
+                                feature.properties?.place_name_en
+                            ].filter(Boolean);
+                            components.push(...altComponents);
+                        }
+
+                        address = components.length > 0 ? components.join(', ') : `Near ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+                    }
+
+                    console.log('MapTiler reverse geocoding successful:', address);
                     return {
                         success: true,
                         message: 'Address retrieved successfully using MapTiler',
@@ -84,36 +172,58 @@ const getAddressFromCoordinates = async (lat, lng) => {
             );
 
             if (nominatimResponse.data && nominatimResponse.data.display_name) {
-                const address = nominatimResponse.data.display_name;
-                
-                console.log('Nominatim reverse geocoding successful');
+                let address = nominatimResponse.data.display_name;
+
+                // Try to create a more readable address from address components
+                const addressDetails = nominatimResponse.data.address || {};
+                const components = [
+                    addressDetails.road || addressDetails.pedestrian,
+                    addressDetails.suburb || addressDetails.neighbourhood,
+                    addressDetails.city || addressDetails.town || addressDetails.village,
+                    addressDetails.state,
+                    addressDetails.country
+                ].filter(Boolean);
+
+                // Use structured address if available, otherwise use display_name
+                if (components.length >= 2) {
+                    address = components.slice(0, 3).join(', '); // Limit to first 3 components for readability
+                }
+
+                console.log('Nominatim reverse geocoding successful:', address);
                 return {
                     success: true,
                     message: 'Address retrieved successfully using Nominatim',
                     data: { address }
                 };
             } else {
+                // Fallback to coordinate-based address
+                const fallbackAddress = `Near ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+                console.log('Nominatim fallback address:', fallbackAddress);
                 return {
                     success: false,
-                    message: 'No address found for the given coordinates',
-                    data: { address: null }
+                    message: 'No detailed address found, using coordinate fallback',
+                    data: { address: fallbackAddress }
                 };
             }
         } catch (nominatimError) {
             console.error('Nominatim API failed:', nominatimError.message);
+            // Final fallback - create a coordinate-based address
+            const fallbackAddress = `Location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
             return {
                 success: false,
-                message: 'Both MapTiler and Nominatim APIs failed',
-                data: { address: null }
+                message: 'Geocoding services unavailable, using coordinate fallback',
+                data: { address: fallbackAddress }
             };
         }
 
     } catch (error) {
         console.error('Reverse geocoding error:', error);
+        // Provide coordinate-based fallback even in case of errors
+        const fallbackAddress = `Location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
         return {
             success: false,
-            message: 'Internal error during reverse geocoding',
-            data: { address: null }
+            message: 'Geocoding service error, using coordinate fallback',
+            data: { address: fallbackAddress }
         };
     }
 };

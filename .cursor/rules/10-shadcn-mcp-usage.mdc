@@ -1,0 +1,17 @@
+---
+description: When asked to use shadcn components, fetch from the shadcn MCP server. Prefer full blocks when available.
+alwaysApply: false
+---
+Usage Rule
+- When a task involves shadcn/ui (new component, variant, or block), FIRST call the shadcn MCP tool to get:
+  1) canonical component or block source,
+  2) usage notes, and
+  3) any Tailwind/class variant guidance.
+- Adapt styles to our tokens (no raw colors). Keep a11y states and focus rings.
+
+Planning Rule
+- During planning, explicitly list which shadcn components or blocks will be used and why.
+- Prefer whole blocks (navbar, cards, dialogs) when suitable; otherwise compose primitives.
+
+Implementation Rule
+- Cite what you pulled from MCP in the plan. If a component is missing, pick the closest shadcn primitive and detail the delta.

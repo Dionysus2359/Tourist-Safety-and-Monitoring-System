@@ -59,7 +59,7 @@ export default function TripDetails() {
 
   return (
     <div
-      className="relative flex size-full min-h-screen flex-col justify-between dark group/design-root overflow-x-hidden bg-[#111714]"
+      className="relative flex size-full min-h-screen flex-col dark group/design-root overflow-x-hidden bg-[#111714]"
       style={{ fontFamily: '"Spline Sans", "Noto Sans", sans-serif' }}
     >
       <main className="flex-grow">
@@ -227,7 +227,7 @@ export default function TripDetails() {
       </main>
 
       {/* Footer */}
-      <footer className="w-full bg-[#111714] py-8 text-center">
+      <footer className="mt-auto w-full bg-[#111714] py-8 text-center">
         <div className="container mx-auto px-4">
           <div className="mb-4 flex flex-wrap items-center justify-center gap-x-8 gap-y-4 text-sm">
             <a href="#" className="text-gray-400 hover:text-white">

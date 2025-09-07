@@ -1,6 +1,18 @@
+/**
+ * Tourist Safety and Monitoring System - Backend Server
+ *
+ * This is the main entry point for the backend API server.
+ * It handles user authentication, incident management, geofencing,
+ * and real-time safety monitoring for tourists.
+ */
+
+// Load environment variables in development
 if (process.env.NODE_ENV !== "production") {
     require('dotenv').config();
+    process.env.NODE_ENV = 'development'; // Force development mode for local
 }
+
+// Core dependencies
 const express = require('express');
 const app = express();
 const cors = require('cors');
@@ -9,17 +21,21 @@ const mongoose = require('mongoose');
 const session = require('express-session');
 const passport = require('passport');
 const LocalStrategy = require('passport-local');
-const ExpressError = require('./utils/ExpressError');
+// const ExpressError = require('./utils/ExpressError');
 
 const User = require('./models/user');
 
+// Import configurations
+const connectDB = require('./config/database');
+const sessionConfig = require('./config/session');
+
 // Import middleware
-const { 
-    errorHandler, 
-    notFound, 
-    requestLogger, 
+const {
+    errorHandler,
+    notFound,
+    requestLogger,
     securityHeaders,
-    corsOptions 
+    corsOptions
 } = require('./middleware');
 
 // Import routes
@@ -27,13 +43,10 @@ const userRoutes = require('./routes/users');
 const incidentRoutes = require('./routes/incidents');
 const geofenceRoutes = require('./routes/geofence');
 const alertRoutes = require('./routes/alerts');
+const statsRoutes = require('./routes/stats');
 
-// MongoDB connection
-const uri = `mongodb+srv://dionysus2359:${process.env.MONGODB_ATLAS_PASS}@cluster0.fiv12j3.mongodb.net/touristsafety?retryWrites=true&w=majority&appName=Cluster0`;
-
-mongoose.connect(uri)
-    .then(() => console.log("✅ Connected to MongoDB Atlas"))
-    .catch(err => console.error("❌ MongoDB connection error:", err));
+// Connect to database
+connectDB();
 
 
 
@@ -53,16 +66,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Static files
 app.use(express.static(path.join(__dirname, 'public')));
 
-sessionConfig = {
-    secret: 'ramram',
-    resave: false,
-    saveUninitialized: true,
-    cookie: {
-        expires: Date.now + 1000 * 60 * 60 * 24 * 7,
-        maxAge: 1000 * 60 * 60 * 24 * 7
-    }
-}
-
+// Session configuration
 app.use(session(sessionConfig));
 app.use(passport.initialize());
 app.use(passport.session());
@@ -80,6 +84,7 @@ app.use('/users', userRoutes);
 app.use('/incidents', incidentRoutes);
 app.use('/geofences', geofenceRoutes);
 app.use('/alerts', alertRoutes);
+app.use('/stats', statsRoutes);
 
 // 404 handler
 app.use(notFound);
@@ -87,6 +92,9 @@ app.use(notFound);
 // Error handler
 app.use(errorHandler);
 
-app.listen(3000, () => {
-    console.log("LISTENING ON PORT 3000");
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+    console.log(`🚀 Server is running on port ${PORT}`);
+    console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
 });

@@ -63,6 +63,19 @@ const UserSchema = new Schema({
         enum: ['tourist', 'admin'],
         default: 'tourist'
     },
+    location: {
+        coordinates: {
+            type: [Number], // [longitude, latitude]
+            index: '2dsphere',
+            default: null
+        },
+        address: String,
+        lastUpdated: {
+            type: Date,
+            default: Date.now
+        },
+        accuracy: Number // Location accuracy in meters
+    },
     createdAt: {
         type: Date,
         default: Date.now

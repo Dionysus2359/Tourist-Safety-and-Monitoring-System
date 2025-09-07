@@ -92,7 +92,7 @@ export default function EmergencyContacts() {
   };
 
   return (
-    <div className="relative flex min-h-screen flex-col dark justify-between group/design-root overflow-x-hidden" style={{ fontFamily: "Spline Sans, Noto Sans, sans-serif" }}>
+    <div className="relative flex min-h-screen flex-col dark group/design-root overflow-x-hidden" style={{ fontFamily: "Spline Sans, Noto Sans, sans-serif" }}>
       <main className="flex-grow">
         <div
           className="flex h-screen flex-col items-center justify-center bg-cover bg-center bg-no-repeat p-4"
@@ -229,7 +229,7 @@ export default function EmergencyContacts() {
         </div>
       </main>
 
-      <footer className="w-full bg-[#111714] py-8 text-center">
+      <footer className="mt-auto w-full bg-[#111714] py-8 text-center">
         <div className="container mx-auto px-4">
           <div className="mb-4 flex flex-wrap items-center justify-center gap-x-8 gap-y-4 text-sm">
             <a className="text-gray-400 hover:text-white" href="#">

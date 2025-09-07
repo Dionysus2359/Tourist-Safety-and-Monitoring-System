@@ -67,37 +67,70 @@ const createGeofenceIcon = (alertType) => {
   });
 };
 
-// Custom icon for current location
+  // Custom icon for current location
 const createCurrentLocationIcon = () => {
   return L.divIcon({
-    className: 'custom-div-icon',
+    className: 'current-location-marker',
     html: `<div style="
       background-color: #007bff;
-      width: 24px;
-      height: 24px;
+      width: 28px;
+      height: 28px;
       border-radius: 50%;
-      border: 3px solid white;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+      border: 4px solid white;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.6), 0 0 0 2px #007bff;
       display: flex;
       align-items: center;
       justify-content: center;
       color: white;
       font-weight: bold;
-      font-size: 14px;
-      animation: pulse 2s infinite;
-    ">📍</div>`,
-    iconSize: [24, 24],
-    iconAnchor: [12, 12]
+      font-size: 16px;
+      position: relative;
+      z-index: 1000;
+    ">
+      <div style="
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        background-color: #007bff;
+        animation: currentLocationPulse 2s infinite;
+        opacity: 0.6;
+      "></div>
+      <div style="
+        position: absolute;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background-color: rgba(0, 123, 255, 0.2);
+        animation: currentLocationPulse 2s infinite;
+        top: -6px;
+        left: -6px;
+      "></div>
+      📍
+    </div>
+    <style>
+      @keyframes currentLocationPulse {
+        0% { transform: scale(1); opacity: 0.7; }
+        50% { transform: scale(1.5); opacity: 0.3; }
+        100% { transform: scale(1); opacity: 0.7; }
+      }
+      .current-location-marker {
+        position: relative;
+      }
+    </style>`,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14]
   });
 };
 
-const MapView = ({ 
-  incidents = [], 
-  geofences = [], 
+const MapView = ({
+  incidents = [],
+  geofences = [],
   center = [28.6139, 77.2090], // Default to Delhi, India
   zoom = 10,
   onIncidentClick,
   onGeofenceClick,
+  onLocationUpdate, // New callback to pass current location to parent
   className = '',
   style = {},
   useCurrentLocation = true
@@ -110,6 +143,8 @@ const MapView = ({
   const [currentLocation, setCurrentLocation] = useState(null);
   const [locationError, setLocationError] = useState(null);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+  const [hasUserInteracted, setHasUserInteracted] = useState(false);
+  const [initialLocationSet, setInitialLocationSet] = useState(false);
 
   // Get current location with improved accuracy
   const getCurrentLocation = () => {
@@ -207,20 +242,31 @@ const MapView = ({
   // Helper function to update map with location
   const updateMapWithLocation = (latitude, longitude, position) => {
     const location = [latitude, longitude];
-    
-    // Update map center if map is already initialized
+    setCurrentLocation(location);
+
+    // Notify parent component of location update
+    if (onLocationUpdate) {
+      onLocationUpdate(location, position);
+    }
+
+    // Update map center if map is already initialized and user hasn't interacted yet
     if (mapInstanceRef.current) {
-      mapInstanceRef.current.setView(location, 16); // Increased zoom for better detail
-      
-      // Add current location marker
+      // Only center on initial location detection, not on updates
+      if (!initialLocationSet && !hasUserInteracted) {
+        mapInstanceRef.current.setView(location, 15); // Center on location with reasonable zoom
+        setInitialLocationSet(true);
+        console.log('Initial map center set to current location');
+      }
+
+      // Add/update current location marker
       if (currentLocationMarkerRef.current) {
         mapInstanceRef.current.removeLayer(currentLocationMarkerRef.current);
       }
-      
+
       const currentLocationMarker = L.marker(location, {
         icon: createCurrentLocationIcon()
       });
-      
+
       currentLocationMarker.bindPopup(`
         <div style="min-width: 200px;">
           <h4 style="margin: 0 0 8px 0; color: #007bff;">📍 Your Current Location</h4>
@@ -230,18 +276,36 @@ const MapView = ({
             Accuracy: ±${position.coords.accuracy.toFixed(0)} meters
           </p>
           <p style="margin: 4px 0; font-size: 11px; color: #28a745;">
-            ${position.coords.accuracy <= 50 ? '✅ High Accuracy' : 
+            ${position.coords.accuracy <= 50 ? '✅ High Accuracy' :
               position.coords.accuracy <= 100 ? '⚠️ Medium Accuracy' : '❌ Low Accuracy'}
+          </p>
+          <p style="margin: 4px 0; font-size: 11px; color: #666;">
+            Updated: ${new Date().toLocaleTimeString()}
           </p>
         </div>
       `);
-      
-      currentLocationMarker.addTo(mapInstanceRef.current);
-      currentLocationMarkerRef.current = currentLocationMarker;
-      console.log('Current location marker added to map');
-      
-      // Open popup to show location was found
-      currentLocationMarker.openPopup();
+
+      try {
+        currentLocationMarker.addTo(mapInstanceRef.current);
+        currentLocationMarkerRef.current = currentLocationMarker;
+        console.log('Current location marker added to map at:', location);
+
+        // Force the marker to be visible and on top
+        currentLocationMarker.setZIndexOffset(1000);
+      } catch (e) {
+        console.warn('Error adding current location marker:', e);
+      }
+
+      // Only open popup on initial detection
+      if (!initialLocationSet) {
+        setTimeout(() => {
+          if (currentLocationMarkerRef.current) {
+            currentLocationMarkerRef.current.openPopup();
+          }
+        }, 500);
+      }
+    } else {
+      console.log('Map not initialized yet, location will be set when map loads');
     }
   };
 
@@ -281,6 +345,15 @@ const MapView = ({
         imperial: false
       }).addTo(mapInstanceRef.current);
 
+      // Add event listeners to detect user interaction
+      mapInstanceRef.current.on('zoomend', () => {
+        setHasUserInteracted(true);
+      });
+
+      mapInstanceRef.current.on('moveend', () => {
+        setHasUserInteracted(true);
+      });
+
       // Add current location marker if available
       if (currentLocation) {
         const currentLocationMarker = L.marker(currentLocation, {
@@ -301,8 +374,51 @@ const MapView = ({
     }
 
     return () => {
+      // Clear all markers first
+      if (markersRef.current) {
+        markersRef.current.forEach(marker => {
+          if (marker && mapInstanceRef.current) {
+            try {
+              mapInstanceRef.current.removeLayer(marker);
+            } catch (e) {
+              console.warn('Error removing marker:', e);
+            }
+          }
+        });
+        markersRef.current = [];
+      }
+
+      // Clear geofence layers
+      if (geofenceLayersRef.current) {
+        geofenceLayersRef.current.forEach(layer => {
+          if (layer && mapInstanceRef.current) {
+            try {
+              mapInstanceRef.current.removeLayer(layer);
+            } catch (e) {
+              console.warn('Error removing geofence layer:', e);
+            }
+          }
+        });
+        geofenceLayersRef.current = [];
+      }
+
+      // Clear current location marker
+      if (currentLocationMarkerRef.current && mapInstanceRef.current) {
+        try {
+          mapInstanceRef.current.removeLayer(currentLocationMarkerRef.current);
+        } catch (e) {
+          console.warn('Error removing current location marker:', e);
+        }
+        currentLocationMarkerRef.current = null;
+      }
+
+      // Remove map
       if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
+        try {
+          mapInstanceRef.current.remove();
+        } catch (e) {
+          console.warn('Error removing map:', e);
+        }
         mapInstanceRef.current = null;
       }
     };
@@ -310,12 +426,16 @@ const MapView = ({
 
   // Update map center and zoom when props change
   useEffect(() => {
-    if (mapInstanceRef.current) {
-      const mapCenter = currentLocation || center;
-      const mapZoom = currentLocation ? 15 : zoom;
-      mapInstanceRef.current.setView(mapCenter, mapZoom);
+    if (mapInstanceRef.current && !hasUserInteracted) {
+      try {
+        const mapCenter = currentLocation || center;
+        const mapZoom = currentLocation ? 15 : zoom;
+        mapInstanceRef.current.setView(mapCenter, mapZoom);
+      } catch (e) {
+        console.warn('Error updating map view:', e);
+      }
     }
-  }, [center, zoom, currentLocation]);
+  }, [center, zoom, currentLocation, hasUserInteracted]);
 
   // Update incident markers
   useEffect(() => {
@@ -356,17 +476,21 @@ const MapView = ({
           </div>
         `;
 
-        marker.bindPopup(popupContent);
-        marker.addTo(mapInstanceRef.current);
+        try {
+          marker.bindPopup(popupContent);
+          marker.addTo(mapInstanceRef.current);
 
-        // Add click event listener
-        marker.on('click', () => {
-          if (onIncidentClick) {
-            onIncidentClick(incident);
-          }
-        });
+          // Add click event listener
+          marker.on('click', () => {
+            if (onIncidentClick) {
+              onIncidentClick(incident);
+            }
+          });
 
-        markersRef.current.push(marker);
+          markersRef.current.push(marker);
+        } catch (e) {
+          console.warn('Error adding incident marker:', e);
+        }
       }
     });
   }, [incidents, onIncidentClick]);
@@ -418,17 +542,21 @@ const MapView = ({
           </div>
         `;
 
-        circle.bindPopup(popupContent);
-        circle.addTo(mapInstanceRef.current);
+        try {
+          circle.bindPopup(popupContent);
+          circle.addTo(mapInstanceRef.current);
 
-        // Add click event listener
-        circle.on('click', () => {
-          if (onGeofenceClick) {
-            onGeofenceClick(geofence);
-          }
-        });
+          // Add click event listener
+          circle.on('click', () => {
+            if (onGeofenceClick) {
+              onGeofenceClick(geofence);
+            }
+          });
 
-        geofenceLayersRef.current.push(circle);
+          geofenceLayersRef.current.push(circle);
+        } catch (e) {
+          console.warn('Error adding geofence layer:', e);
+        }
       }
     });
   }, [geofences, onGeofenceClick]);
@@ -460,28 +588,7 @@ const MapView = ({
     };
   }, [incidents, geofences, onIncidentClick, onGeofenceClick]);
 
-  // Expose map methods for parent components
-  const getMapInstance = () => mapInstanceRef.current;
-
-  const fitBounds = (bounds) => {
-    if (mapInstanceRef.current && bounds) {
-      mapInstanceRef.current.fitBounds(bounds);
-    }
-  };
-
-  const setView = (center, zoom) => {
-    if (mapInstanceRef.current) {
-      mapInstanceRef.current.setView(center, zoom);
-    }
-  };
-
-  // Expose methods via ref (if using forwardRef)
-  React.useImperativeHandle = React.useImperativeHandle || (() => {});
-  React.useImperativeHandle(React.forwardRef(() => null), () => ({
-    getMapInstance,
-    fitBounds,
-    setView
-  }));
+  // (Optional) Exposed helpers can be added with forwardRef if needed in the future
 
   // Debug logging
   console.log('MapView render - isLoadingLocation:', isLoadingLocation, 'locationError:', locationError, 'currentLocation:', currentLocation);
@@ -554,8 +661,8 @@ const MapView = ({
         {currentLocation && !isLoadingLocation && !locationError && (
           <>
             <span style={{ color: '#28a745' }}>✅</span>
-            <span style={{ color: '#28a745' }}>Location found</span>
-            <button 
+            <span style={{ color: '#28a745' }}>Location: {currentLocation[0].toFixed(4)}, {currentLocation[1].toFixed(4)}</span>
+            <button
               onClick={getCurrentLocation}
               style={{
                 background: '#007bff',
@@ -568,7 +675,7 @@ const MapView = ({
                 marginLeft: '4px'
               }}
             >
-              Improve Accuracy
+              Update
             </button>
           </>
         )}
@@ -579,13 +686,13 @@ const MapView = ({
             <span style={{ color: '#6c757d' }}>Using default location</span>
           </>
         )}
-        
+
         {/* Always show something if no other state is active */}
         {!isLoadingLocation && !locationError && !currentLocation && useCurrentLocation && (
           <>
-            <span style={{ color: '#6c757d' }}>📍</span>
-            <span style={{ color: '#6c757d' }}>Location not available</span>
-            <button 
+            <span style={{ color: '#ffc107' }}>⚠️</span>
+            <span style={{ color: '#ffc107' }}>Waiting for location...</span>
+            <button
               onClick={getCurrentLocation}
               style={{
                 background: '#007bff',
@@ -598,7 +705,7 @@ const MapView = ({
                 marginLeft: '4px'
               }}
             >
-              Try Again
+              Retry
             </button>
           </>
         )}
