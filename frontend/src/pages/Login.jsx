@@ -63,16 +63,16 @@ export default function LoginPage() {
         </div>
 
         {/* Login Card */}
-        <Card className="glass-effect border-white/20 shadow-xl rounded-xl md:rounded-2xl">
+        <Card className="glass-effect border-white/20 shadow-xl rounded-2xl md:rounded-3xl max-w-[560px] mx-auto">
           <CardHeader className="space-y-1 pb-0 sm:pb-2">
-            <CardTitle className="text-2xl sm:text-3xl text-center">Login</CardTitle>
+            <CardTitle className="text-3xl sm:text-4xl text-center tracking-tight">Login</CardTitle>
             <CardDescription className="text-center text-sm sm:text-base">
               Enter your credentials to access your account
             </CardDescription>
           </CardHeader>
 
-          <CardContent className="p-5 sm:p-6 md:p-8">
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 sm:space-y-5">
+          <CardContent className="p-6 sm:p-8">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 sm:space-y-6">
               {error && (
                 <Alert variant="destructive">
                   <AlertDescription>{error}</AlertDescription>
@@ -81,14 +81,14 @@ export default function LoginPage() {
 
               {/* Username Field */}
               <div className="space-y-2">
-                <Label htmlFor="username" className="text-white">Username</Label>
+                <Label htmlFor="username" className="text-white text-sm mb-1.5 block">Username</Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                   <Input
                     id="username"
                     type="text"
                     placeholder="Enter your username"
-                    className="pl-11 h-11 sm:h-12 text-base bg-white/10 border-white/20 text-white placeholder:text-muted-foreground focus:border-primary"
+                    className="pl-12 pr-12 h-12 text-[15px] bg-white/10 border-white/30 text-white placeholder:text-muted-foreground focus:border-primary rounded-lg"
                     {...register("username")}
                   />
                 </div>
@@ -99,14 +99,14 @@ export default function LoginPage() {
 
               {/* Password Field */}
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-white">Password</Label>
+                <Label htmlFor="password" className="text-white text-sm mb-1.5 block">Password</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="Enter your password"
-                    className="pl-11 pr-12 h-11 sm:h-12 text-base bg-white/10 border-white/20 text-white placeholder:text-muted-foreground focus:border-primary"
+                    className="pl-12 pr-12 h-12 text-[15px] bg-white/10 border-white/30 text-white placeholder:text-muted-foreground focus:border-primary rounded-lg"
                     {...register("password")}
                   />
                   <Button
@@ -131,7 +131,7 @@ export default function LoginPage() {
               {/* Login Button */}
               <Button
                 type="submit"
-                className="w-full h-11 sm:h-12 text-base bg-primary hover:bg-primary/90 text-primary-foreground"
+                className="w-full h-12 text-base bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg"
                 disabled={loading}
               >
                 {loading ? (

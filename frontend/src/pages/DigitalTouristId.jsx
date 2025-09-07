@@ -110,12 +110,12 @@ const TouristID = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 px-3 sm:px-6 lg:px-8 mt-5">
       {/* Header */}
       <div className="border-b bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50">
         <div className="flex h-16 items-center px-4">
           <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 ml-1.5">
               <Shield className="h-6 w-6 text-primary" />
               <span className="text-lg font-semibold">Digital Tourist ID</span>
             </div>
@@ -129,8 +129,8 @@ const TouristID = () => {
         </div>
       </div>
 
-      <div className="container mx-auto py-8 px-4">
-        <div className="max-w-4xl mx-auto space-y-6">
+      <div className="container mx-auto py-6 sm:py-8 px-0">
+        <div className="max-w-5xl mx-auto space-y-6">
           {/* Welcome Section */}
           <div className="text-center space-y-2">
             <div className="w-20 h-20 bg-primary/20 rounded-full flex items-center justify-center mx-auto">
@@ -143,7 +143,7 @@ const TouristID = () => {
           </div>
 
           {/* Main ID Card */}
-          <Card className="glass-effect border-white/20">
+          <Card className="glass-effect border-white/20 shadow-xl">
             <CardHeader className="text-center">
               <div className="flex items-center justify-center space-x-4 mb-4">
                 <Avatar className="h-16 w-16">
@@ -162,7 +162,7 @@ const TouristID = () => {
               </div>
             </CardHeader>
 
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-6 p-4 sm:p-6 md:p-8">
               {/* ID Information Grid */}
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-4">

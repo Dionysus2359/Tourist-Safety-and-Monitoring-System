@@ -83,7 +83,7 @@ export default function Admin() {
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 px-3 sm:px-6 lg:px-8">
       {/* Header */}
       <div className="border-b bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50">
-        <div className="flex h-16 items-center px-4">
+        <div className="flex h-14 sm:h-16 items-center px-3 sm:px-4">
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
               <Shield className="h-6 w-6 text-primary" />
@@ -101,7 +101,7 @@ export default function Admin() {
 
       <div className="flex-1 space-y-4 py-6 sm:py-8 px-0">
         <div className="flex items-center justify-between space-y-2">
-          <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h2>
         </div>
 
         {/* Stats Cards */}
@@ -147,7 +147,7 @@ export default function Admin() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="pl-2">
-                  <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
+                  <div className="aspect-video bg-muted/50 rounded-lg flex items-center justify-center">
                     <div className="text-center">
                       <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
                       <p className="text-muted-foreground">Interactive map would be displayed here</p>
@@ -164,7 +164,7 @@ export default function Admin() {
                     Latest tourist check-ins and alerts
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
                   <div className="space-y-4">
                     <div className="flex items-center">
                       <Avatar className="h-9 w-9">

@@ -108,10 +108,15 @@ const loginUser = async (req, res, next) => {
             });
         }
 
-        const { username, password } = validation.value;
+        const { username, email, password } = validation.value;
 
-        // Find user by username
-        const user = await User.findOne({ username });
+        // Find user by username or email
+        let user = null;
+        if (username) {
+            user = await User.findOne({ username });
+        } else if (email) {
+            user = await User.findOne({ email });
+        }
         if (!user) {
             return res.status(401).json({
                 success: false,

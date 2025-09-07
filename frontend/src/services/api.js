@@ -40,7 +40,7 @@ api.interceptors.response.use(
 export const authAPI = {
     login: (credentials) => api.post('/users/login', credentials),
     register: (userData) => api.post('/users/register', userData),
-    logout: () => api.post('/users/logout'),
+    logout: () => api.get('/users/logout'),
     getProfile: () => api.get('/users/profile'),
     updateProfile: (userData) => api.put('/users/profile', userData),
     generateDigitalId: (publicKey) => api.post('/users/generate-digital-id', { publicKey }),

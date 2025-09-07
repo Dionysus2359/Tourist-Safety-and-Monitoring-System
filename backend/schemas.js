@@ -67,21 +67,20 @@ const userRegistrationSchema = Joi.object({
         })
 });
 
-// User login validation schema
+// User login validation schema (accepts either username or email)
 const userLoginSchema = Joi.object({
-    username: Joi.string()
-        .required()
-        .messages({
-            'string.empty': 'Username is required',
-            'any.required': 'Username is required'
-        }),
-    
+    username: Joi.string().allow(null, ''),
+    email: Joi.string().email().allow(null, ''),
     password: Joi.string()
         .required()
         .messages({
             'string.empty': 'Password is required',
             'any.required': 'Password is required'
         })
+})
+.or('username', 'email')
+.messages({
+    'object.missing': 'Either username or email is required'
 });
 
 // Emergency contact validation schema

@@ -1,8 +1,9 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import { ROUTES } from './constants';
 import './App.css';
+// import './index.css';
 
 // Pages
 import Home from './pages/Home';
@@ -30,6 +31,11 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   }
 
   if (!isAuthenticated) {
+    // If route restricted to admins, redirect to admin login
+    if (allowedRoles.includes('admin')) {
+      return <Navigate to={ROUTES.ADMIN_LOGIN} replace />;
+    }
+    // Otherwise, show standard login
     return <Login />;
   }
 

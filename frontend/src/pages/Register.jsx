@@ -98,28 +98,22 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center gradient-bg p-4">
-      <div className="w-full max-w-2xl space-y-6">
-        {/* Logo/Brand Section */}
-        <div className="text-center space-y-2">
-          <div className="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mx-auto">
-            <Shield className="w-8 h-8 text-primary" />
-          </div>
-          <h1 className="text-3xl font-bold text-white">Create Your Account</h1>
-          <p className="text-muted-foreground">Join SafeTravels and stay safe on your journeys</p>
-        </div>
-
+    <div className="min-h-screen flex items-center justify-center gradient-bg px-4 sm:px-6 lg:px-8 py-8">
+      <div className="w-full max-w-2xl lg:max-w-4xl">
         {/* Registration Card */}
-        <Card className="glass-effect border-white/20">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl text-center">Sign Up</CardTitle>
-            <CardDescription className="text-center">
-              Fill in your details to create a new account
+        <Card className="glass-effect border-white/20 shadow-xl rounded-xl md:rounded-2xl">
+          <CardHeader className="space-y-2 pb-0 sm:pb-2 text-center">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-primary/20 rounded-full flex items-center justify-center mx-auto">
+              <Shield className="w-8 h-8 sm:w-10 sm:h-10 text-primary" />
+            </div>
+            <CardTitle className="text-2xl sm:text-3xl">Create Your Account</CardTitle>
+            <CardDescription className="text-sm sm:text-base">
+              Join SafeTravels and stay safe on your journeys
             </CardDescription>
           </CardHeader>
 
-          <CardContent>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <CardContent className="p-5 sm:p-6 md:p-8">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
               {(error || serverErrors.length > 0) && (
                 <Alert variant="destructive">
                   <AlertDescription>
@@ -135,17 +129,17 @@ export default function Register() {
                 </Alert>
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                 {/* Name Field */}
                 <div className="space-y-2">
-                  <Label htmlFor="name" className="text-white">Full Name</Label>
+                  <Label htmlFor="name" className="text-white text-sm mb-1.5 block">Full Name</Label>
                   <div className="relative">
-                    <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                     <Input
                       id="name"
                       type="text"
                       placeholder="Enter your full name"
-                      className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-muted-foreground focus:border-primary"
+                      className="pl-12 pr-12 h-12 text-[15px] bg-white/10 border-white/30 text-white placeholder:text-muted-foreground focus:border-primary rounded-lg"
                       {...register("name")}
                     />
                   </div>
@@ -156,14 +150,14 @@ export default function Register() {
 
                 {/* Username Field */}
                 <div className="space-y-2">
-                  <Label htmlFor="username" className="text-white">Username</Label>
+                  <Label htmlFor="username" className="text-white text-sm mb-1.5 block">Username</Label>
                   <div className="relative">
-                    <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                     <Input
                       id="username"
                       type="text"
                       placeholder="Choose a username"
-                      className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-muted-foreground focus:border-primary"
+                      className="pl-12 pr-12 h-12 text-[15px] bg-white/10 border-white/30 text-white placeholder:text-muted-foreground focus:border-primary rounded-lg"
                       {...register("username")}
                     />
                   </div>
@@ -173,17 +167,17 @@ export default function Register() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                 {/* Email Field */}
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="text-white">Email Address</Label>
+                  <Label htmlFor="email" className="text-white text-sm mb-1.5 block">Email Address</Label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                     <Input
                       id="email"
                       type="email"
                       placeholder="Enter your email"
-                      className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-muted-foreground focus:border-primary"
+                      className="pl-12 pr-12 h-12 text-[15px] bg-white/10 border-white/30 text-white placeholder:text-muted-foreground focus:border-primary rounded-lg"
                       {...register("email")}
                     />
                   </div>
@@ -194,14 +188,14 @@ export default function Register() {
 
                 {/* Phone Field */}
                 <div className="space-y-2">
-                  <Label htmlFor="phone" className="text-white">Phone Number</Label>
+                  <Label htmlFor="phone" className="text-white text-sm mb-1.5 block">Phone Number</Label>
                   <div className="relative">
-                    <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                     <Input
                       id="phone"
                       type="tel"
                       placeholder="Enter your phone number"
-                      className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-muted-foreground focus:border-primary"
+                      className="pl-12 pr-12 h-12 text-[15px] bg-white/10 border-white/30 text-white placeholder:text-muted-foreground focus:border-primary rounded-lg"
                       {...register("phone")}
                     />
                   </div>
@@ -213,14 +207,14 @@ export default function Register() {
 
               {/* KYC Document Field */}
               <div className="space-y-2">
-                <Label htmlFor="kycDocNumber" className="text-white">KYC Document Number</Label>
+                <Label htmlFor="kycDocNumber" className="text-white text-sm mb-1.5 block">KYC Document Number</Label>
                 <div className="relative">
-                  <FileText className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <FileText className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                   <Input
                     id="kycDocNumber"
                     type="text"
                     placeholder="Enter your Aadhaar/Passport number"
-                    className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-muted-foreground focus:border-primary"
+                    className="pl-12 pr-12 h-12 text-[15px] bg-white/10 border-white/30 text-white placeholder:text-muted-foreground focus:border-primary rounded-lg"
                     {...register("kycDocNumber")}
                   />
                 </div>
@@ -229,17 +223,17 @@ export default function Register() {
                 )}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                 {/* Password Field */}
                 <div className="space-y-2">
-                  <Label htmlFor="password" className="text-white">Password</Label>
+                  <Label htmlFor="password" className="text-white text-sm mb-1.5 block">Password</Label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                     <Input
                       id="password"
                       type={showPassword ? "text" : "password"}
                       placeholder="Create a password"
-                      className="pl-10 pr-10 bg-white/10 border-white/20 text-white placeholder:text-muted-foreground focus:border-primary"
+                      className="pl-12 pr-12 h-12 text-[15px] bg-white/10 border-white/30 text-white placeholder:text-muted-foreground focus:border-primary rounded-lg"
                       {...register("password")}
                     />
                     <Button
@@ -250,9 +244,9 @@ export default function Register() {
                       onClick={() => setShowPassword(!showPassword)}
                     >
                       {showPassword ? (
-                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                        <EyeOff className="h-5 w-5 text-muted-foreground" />
                       ) : (
-                        <Eye className="h-4 w-4 text-muted-foreground" />
+                        <Eye className="h-5 w-5 text-muted-foreground" />
                       )}
                     </Button>
                   </div>
@@ -263,14 +257,14 @@ export default function Register() {
 
                 {/* Confirm Password Field */}
                 <div className="space-y-2">
-                  <Label htmlFor="confirmPassword" className="text-white">Confirm Password</Label>
+                  <Label htmlFor="confirmPassword" className="text-white text-sm mb-1.5 block">Confirm Password</Label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                     <Input
                       id="confirmPassword"
                       type={showConfirmPassword ? "text" : "password"}
                       placeholder="Confirm your password"
-                      className="pl-10 pr-10 bg-white/10 border-white/20 text-white placeholder:text-muted-foreground focus:border-primary"
+                      className="pl-12 pr-12 h-12 text-[15px] bg-white/10 border-white/30 text-white placeholder:text-muted-foreground focus:border-primary rounded-lg"
                       {...register("confirmPassword")}
                     />
                     <Button
@@ -281,9 +275,9 @@ export default function Register() {
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     >
                       {showConfirmPassword ? (
-                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                        <EyeOff className="h-5 w-5 text-muted-foreground" />
                       ) : (
-                        <Eye className="h-4 w-4 text-muted-foreground" />
+                        <Eye className="h-5 w-5 text-muted-foreground" />
                       )}
                     </Button>
                   </div>
@@ -294,23 +288,25 @@ export default function Register() {
               </div>
 
               {/* Submit Button */}
-              <Button
-                type="submit"
-                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating Account...
-                  </>
-                ) : (
-                  <>
-                    <Shield className="mr-2 h-4 w-4" />
-                    Create Account
-                  </>
-                )}
-              </Button>
+              <div className="pt-2">
+                <Button
+                  type="submit"
+                  className="w-full h-12 text-base bg-primary hover:bg-primary/90 text-primary-foreground"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Creating Account...
+                    </>
+                  ) : (
+                    <>
+                      <Shield className="mr-2 h-5 w-5" />
+                      Create Account
+                    </>
+                  )}
+                </Button>
+              </div>
             </form>
 
             {/* Sign In Link */}
