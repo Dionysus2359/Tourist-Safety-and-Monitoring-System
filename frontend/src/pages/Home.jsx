@@ -5,7 +5,10 @@ export default function Home() {
   const navigate = useNavigate();
 
   return (
-    <div className="flex flex-col min-h-screen w-full" style={{ fontFamily: '"Spline Sans", "Noto Sans", sans-serif' }}>
+    <div
+      className="flex flex-col min-h-screen w-full"
+      style={{ fontFamily: '"Spline Sans", "Noto Sans", sans-serif' }}
+    >
       {/* Hero Section */}
       <main className="flex-grow">
         <div
@@ -23,27 +26,37 @@ export default function Home() {
                 Welcome to SafeTravels
               </h1>
               <p className="mt-4 text-gray-300">
-                Your safety is our priority. Register or log in to access personalized safety features and real-time assistance.
+                Your safety is our priority. Register or log in to access
+                personalized safety features and real-time assistance.
               </p>
             </div>
 
             <div className="space-y-4">
-            <button
-  className="flex w-full items-center justify-center gap-2 rounded-full border border-gray-600 bg-transparent py-3 text-sm font-bold text-white transition-colors hover:bg-gray-800"
-  onClick={() => navigate("/login")}
->
-  <span className="material-symbols-outlined"></span>
-  Login
-</button>
-
+              <button
+               className="flex w-full items-center justify-center gap-2 rounded-full border border-gray-600 bg-transparent py-3 text-sm font-bold text-white transition-colors hover:bg-gray-800"
+                onClick={() => navigate("/login")}
+              >
+                <span className="material-symbols-outlined"></span>
+                Login
+              </button>
 
               <button
                 className="flex w-full items-center justify-center gap-2 rounded-full border border-gray-600 bg-transparent py-3 text-sm font-bold text-white transition-colors hover:bg-gray-800"
                 onClick={() => navigate("/register")}
               >
                 <span className="material-symbols-outlined">Register</span>
-                
               </button>
+
+            
+            <button
+  className="flex w-full items-center justify-center gap-2 rounded-full bg-orange-500 py-3 text-sm font-bold text-orange-900 transition-colors hover:bg-orange-600"
+  onClick={() => navigate("/adminlogin")}
+>
+  <span className="material-symbols-outlined"></span>
+  Admin
+</button>
+
+             
             </div>
           </div>
         </div>
@@ -67,7 +80,9 @@ export default function Home() {
             </a>
           </div>
 
-          <p className="text-sm text-gray-500">© 2024 SafeTravels. All rights reserved.</p>
+          <p className="text-sm text-gray-500">
+            © 2024 SafeTravels. All rights reserved.
+          </p>
         </div>
       </footer>
     </div>
